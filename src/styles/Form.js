@@ -71,6 +71,19 @@ const FormButton = styled.button`
   cursor: pointer;
 `
 
+const FormSubtitle = styled.p`
+  align-self: center;
+  font-size: 10px;
+  color: #78C1FF;
+  margin-top: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  a {
+    color: #78C1FF;
+    text-decoration: none;
+  }
+`
+
 export {
   Layout,
   Container,
@@ -80,5 +93,6 @@ export {
   FormCheckbox,
   FormRowContainer,
   FormSelect,
-  FormButton
+  FormButton,
+  FormSubtitle
 }

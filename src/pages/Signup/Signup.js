@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {db, firebaseApp, firebase } from '../../firebase'
-import { useHistory } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUserProfile } from '../../reducers/user'
 
@@ -13,7 +13,8 @@ import {
 	FormCheckbox,
 	FormRowContainer,
 	FormSelect,
-	FormButton
+	FormButton,
+	FormSubtitle
 } from '../../styles/Form'
 
 const Signup = () => {
@@ -137,6 +138,10 @@ const Signup = () => {
 				<FormButton onClick={onSubmitForm}>
 					Create Account
 				</FormButton>
+
+				<FormSubtitle>
+					<Link to="/user/login">Already have an account?</Link>
+				</FormSubtitle>
 
 			</Container>
 		</Layout>
