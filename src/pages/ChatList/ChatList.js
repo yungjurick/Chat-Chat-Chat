@@ -16,16 +16,19 @@ const ChatList = () => {
 
 	console.log(rooms);
 
+	const onCloseRoomModal = () => setIsRoomModalOpen(prev => !prev);
+
 	const fetchChatRooms = async () => {
 		dispatch(setLoading(true));
 		try {
 			const querySnapshot = await db.collection('chatrooms').get();
-
+			const updatedRooms = []
 			querySnapshot.forEach((doc) => {
 				console.log(doc.data())
-				const updatedRooms = [...rooms, doc.data()]
-				setRooms(updatedRooms);
+				updatedRooms.push(doc.data());
 			});
+
+			setRooms(updatedRooms);
 		} catch (e) {
 			console.log(e);
 		}
@@ -52,15 +55,24 @@ const ChatList = () => {
 		<Layout>
 			<Container>
 				<NavContainer>
-					<NavTitle>Chat Rooms</NavTitle>
+					<NavTitle>
+						Chat Rooms
+					</NavTitle>
 					<NavButton onClick={() => setIsRoomModalOpen(true)}>Create New Room</NavButton>
 					<NavButton secondary>Logout</NavButton>
 				</NavContainer>
 				<List>
-
+					{rooms.map(({ title, description, id }) => {
+						return (
+							<ListItem key={id}>
+								<ListItemTitle>{title}</ListItemTitle>
+								<ListItemDescription>{description}</ListItemDescription>
+							</ListItem>
+						)
+					})}
 				</List>
 			</Container>
-			<RoomModal isOpened={isRoomModalOpen}/>
+			<RoomModal isOpened={isRoomModalOpen} onClose={onCloseRoomModal}/>
 		</Layout>
 	)
 }
@@ -111,16 +123,37 @@ const NavButton = styled.button`
 `;
 
 const List = styled.div`
+	padding: 12px 0;
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
+	grid-auto-rows: 150px;
 	column-gap: 10px;
+	row-gap: 10px;
 	height: 90%;
 `;
 
-const ListItem = styled.div``;
+const ListItem = styled.div`
+	width: 100%;
+	height: 100%;
+	border-radius: 4px;
+	background-color: #78C1FF;
+	color: white;
+	cursor: pointer;
+	transition: all 0.2s;
+	&:hover {
+		background-color: #1D3556;
+	}
+`;
 
-const ListItemTitle = styled.p``;
+const ListItemTitle = styled.p`
+	padding: 0 12px;
+	font-weight: bold;
+	font-size: 12px;
+`;
 
-const ListItemDescription = styled.p``;
+const ListItemDescription = styled.p`
+	padding: 0 12px;
+	font-size: 12px;
+`;
 
 export default ChatList

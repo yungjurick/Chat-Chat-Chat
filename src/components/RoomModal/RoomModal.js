@@ -13,7 +13,7 @@ import {
 	FormButton
 } from '../../styles/Form'
 
-const RoomModal = ({ isOpened }) => {
+const RoomModal = ({ isOpened, onClose }) => {
   const history = useHistory();
   const dispatch = useDispatch();
 
@@ -71,6 +71,16 @@ const RoomModal = ({ isOpened }) => {
       history.push(`/chat/room/${roomId}`)
     }
   }
+  
+  const handleClose = () => {
+    setRoomObject({
+      title: '',
+      password: '',
+      description: ''
+    })
+
+    onClose();
+  }
 
   const { title, description, password } = roomObject;
   const { nickname, uid } = useSelector((state) => (state.user.userProfile || { nickname: '', uid: ''}));
@@ -90,6 +100,7 @@ const RoomModal = ({ isOpened }) => {
         <FormTextInput type="password" value={password} onChange={e => onChangeRoomObject(e, 'password')}/>
 
         <FormButton onClick={() => onSubmit()}>Submit</FormButton>
+        <FormButton secondary onClick={() => handleClose()}>Close</FormButton>
       </ModalContainer>
     </ModalLayout>
   )

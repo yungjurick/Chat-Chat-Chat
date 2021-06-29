@@ -60,7 +60,7 @@ const FormSelect = styled.select`
 const FormButton = styled.button`
   justify-self: flex-end;
   width: 100%;
-  background-color: #78C1FF;
+  background-color: ${props => props.secondary ? "#1d3557" : "#78C1FF;"};
   border: none;
   color: white;
   font-weight: bold;
@@ -69,6 +69,9 @@ const FormButton = styled.button`
   border-radius: 4px;
   margin-top: 26px;
   cursor: pointer;
+  & + & {
+    margin-top: 12px;
+  }
 `
 
 const FormSubtitle = styled.p`
