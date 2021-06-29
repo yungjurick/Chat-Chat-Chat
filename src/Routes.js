@@ -5,11 +5,11 @@ import {
   Switch,
 } from 'react-router-dom';
 
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ChatList from './pages/ChatList';
-import ChatRoom from './pages/ChatRoom';
+import Landing from './pages/Landing/Landing';
+import Login from './pages/Login/Login';
+import Signup from './pages/Signup/Signup';
+import ChatList from './pages/ChatList/ChatList';
+import ChatRoom from './pages/ChatRoom/ChatRoom';
 
 class Routes extends React.Component {
   render() {
