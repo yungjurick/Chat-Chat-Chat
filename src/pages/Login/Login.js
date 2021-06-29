@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {db, firebaseApp} from '../../firebase'
+import { db, firebaseApp } from '../../firebase'
 import { Link, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { setUserProfile } from '../../reducers/user'
+import { setUserProfile } from '../../reducers/user';
+import { setLoading } from '../../reducers/loading';
 
 import {
 	Layout,
@@ -33,6 +34,9 @@ const Login = () => {
 		}
 
   const onSubmitLogin = async () => {
+    // Start Loading
+    dispatch(setLoading(true));
+
     try {
       await firebaseApp.auth().signInWithEmailAndPassword(email, password)
       const uid = (firebaseApp.auth().currentUser || {}).uid;
@@ -43,11 +47,14 @@ const Login = () => {
 
         dispatch(setUserProfile(userDoc.data()));
         
-        history.push('/room/list');
+        history.push('/chat/room');
       }
     } catch (e) {
       alert(e.message);
     }
+
+    // End Loading
+    dispatch(setLoading(false));
   }
 
 	return (

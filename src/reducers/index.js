@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux';
 import user from './user';
+import loading from './loading';
 
 export const USER_LOGOUT = "USER_LOGOUT"
 export const userLogOut = () => ({
@@ -8,6 +9,7 @@ export const userLogOut = () => ({
 
 const appReducer = combineReducers({
   user,
+  loading
 })
 
 const rootReducer = (state, action) => {

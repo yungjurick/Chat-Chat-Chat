@@ -2,14 +2,21 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import Routes from './Routes';
+import Loading from './components/Loading/Loading'
 import reportWebVitals from './reportWebVitals';
 
 import { Provider } from 'react-redux';
-import store from './config/store';
+import { PersistGate } from 'redux-persist/integration/react';
+
+import configureStore from './config/store';
+const {store, persistor} = configureStore();
 
 ReactDOM.render(
   <Provider store={store}>
-    <Routes/>
+    <PersistGate loading={null} persistor={persistor}>
+      <Loading/>
+      <Routes/>
+    </PersistGate>
   </Provider>,
   document.getElementById('root')
 );

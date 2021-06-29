@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {db, firebaseApp, firebase } from '../../firebase'
 import { Link, useHistory } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setLoading } from '../../reducers/loading';
 
 import {
 	Layout,
@@ -16,6 +18,7 @@ import {
 } from '../../styles/Form'
 
 const Signup = () => {
+	const dispatch = useDispatch();
 	const history = useHistory();
 
 	/* STATES */
@@ -73,6 +76,9 @@ const Signup = () => {
 		const onChangeIsAgreeInfo = () => setIsAgreeInfo(prev => !prev);
 	
 		const onSubmitSignup = async () => {
+			// Start Loading
+			dispatch(setLoading(true));
+
 			if (validateForm(userObject, isAgreeInfo)) {
 				try {
 					await firebaseApp.auth().createUserWithEmailAndPassword(email, password)
@@ -103,6 +109,9 @@ const Signup = () => {
 					alert(e.message);
 				}
 			}
+
+			// Start Loading
+			dispatch(setLoading(false));
 		}
 
 	return (
