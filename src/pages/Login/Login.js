@@ -1,15 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import {db, firebaseApp} from '../../firebase'
-import { useHistory } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setUserProfile } from '../../reducers/user'
+
+import {
+	Layout,
+	Container,
+	Header,
+	FormLabel,
+	FormTextInput,
+	FormButton,
+	FormSubtitle
+} from '../../styles/Form'
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
   const history = useHistory();
+  const dispatch = useDispatch();
 
-  const onEmailChange = e => setEmail(e.target.value);
-  const onPasswordChange = e => setPassword(e.target.value);
+  const [loginObject, setLoginObject] = useState({
+    email: '',
+    password: ''
+  })
+
+  const { email, password } = loginObject;
+
+  const onChangeLoginObject = (e, type) => {
+    setLoginObject({
+				...loginObject,
+				[type]: e.target.value
+			})
+		}
 
   const onSubmitLogin = async () => {
     try {
@@ -19,18 +40,38 @@ const Login = () => {
       if (uid) {
         const userRef = db.collection('users').doc(uid);
         const userDoc = await userRef.get();
-        //then, set redux 
+
+        dispatch(setUserProfile(userDoc.data()));
         
         history.push('/room/list');
-      } else {
-        alert('Error');
       }
     } catch (e) {
-      const { code, message } = e;
+      alert(e.message);
     }
   }
 
-	return <div>Login Page</div>
+	return (
+		<Layout>
+			<Container>
+				<Header>Login to Chat App</Header>
+
+				<FormLabel>Email</FormLabel>
+				<FormTextInput type="text" value={email} onChange={e => onChangeLoginObject(e, 'email')}/>
+
+				<FormLabel>Password</FormLabel>
+				<FormTextInput type="password" value={password} onChange={e => onChangeLoginObject(e, 'password')}/>
+
+				<FormButton onClick={onSubmitLogin}>
+					Login
+				</FormButton>
+
+				<FormSubtitle>
+					<Link to="/users/signup">New to Chat App?</Link>
+				</FormSubtitle>
+
+			</Container>
+		</Layout>
+	)
 }
 
 export default Login

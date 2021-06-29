@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {db, firebaseApp, firebase } from '../../firebase'
 import { Link, useHistory } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { setUserProfile } from '../../reducers/user'
 
 import {
 	Layout,
@@ -19,7 +17,6 @@ import {
 
 const Signup = () => {
 	const history = useHistory();
-	const dispatch = useDispatch();
 
 	/* STATES */
 	const [userObject, setUserObject] = useState({
@@ -75,7 +72,7 @@ const Signup = () => {
 	
 		const onChangeIsAgreeInfo = () => setIsAgreeInfo(prev => !prev);
 	
-		const onSubmitForm = async () => {
+		const onSubmitSignup = async () => {
 			if (validateForm(userObject, isAgreeInfo)) {
 				try {
 					await firebaseApp.auth().createUserWithEmailAndPassword(email, password)
@@ -91,9 +88,10 @@ const Signup = () => {
 							created: firebase.firestore.Timestamp.now().seconds
 						}
 
-						await db.collection('users').add(payload);
-						
-						dispatch(setUserProfile(payload));
+						await db
+							.collection('users')
+							.doc(uid)
+							.set(payload);
 
 						history.push('/users/login');
 
@@ -135,12 +133,12 @@ const Signup = () => {
 					<FormCheckbox type="checkbox" checked={isAgreeInfo} onChange={() => onChangeIsAgreeInfo()}/>
 				</FormRowContainer>
 
-				<FormButton onClick={onSubmitForm}>
+				<FormButton onClick={onSubmitSignup}>
 					Create Account
 				</FormButton>
 
 				<FormSubtitle>
-					<Link to="/user/login">Already have an account?</Link>
+					<Link to="/users/login">Already have an account?</Link>
 				</FormSubtitle>
 
 			</Container>
