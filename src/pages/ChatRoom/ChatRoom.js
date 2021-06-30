@@ -110,27 +110,51 @@ const ChatRoom = () => {
     addUserToRoom();
   }, [])
 
-  // Chat Message
+  // Subscriptions on Firestore
 
   useEffect(() => {
-    const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('messages')
-    chatRef.orderBy("created").onSnapshot((snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const newEntry = change.doc.data();
-          newEntry.id = change.doc.id
-          setNewMessage(newEntry); 
-        }
-        if (change.type === "modified") {
-          const data = change.doc.data();
-          data.id = change.doc.id
-          setModifyMessage(data);  
-        }
-        if (change.type === "removed") {
-          console.log("remove message: ", change.doc.data());
-        }
+    const unsubscribeChat = () => {
+      const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('messages')
+      chatRef.orderBy("created").onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const newEntry = change.doc.data();
+            newEntry.id = change.doc.id
+            setNewMessage(newEntry); 
+          }
+          if (change.type === "modified") {
+            const data = change.doc.data();
+            data.id = change.doc.id
+            setModifyMessage(data);  
+          }
+          if (change.type === "removed") {
+            console.log("remove message: ", change.doc.data());
+          }
+        });
       });
-    });
+    }
+
+    const unsubscribeParticipant = () => {
+      const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('participants')
+      chatRef.orderBy("entered").onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const newP = change.doc.data();
+            newP.id = change.doc.id
+            setNewParticipant(newP);
+          }
+          if (change.type === "removed") {
+            console.log("remove user: ", change.doc.data());
+          }
+        });
+      });
+    }
+
+    return () => {
+      unsubscribeChat();
+      unsubscribeParticipant();
+    }
+
   }, [])
 
   useEffect(() => {
@@ -151,24 +175,6 @@ const ChatRoom = () => {
       setChats(cp)
     }
   }, [modifyMessage])
-
-  // Chat Participants
-
-  useEffect(() => {
-    const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('participants')
-    chatRef.orderBy("entered").onSnapshot((snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const newP = change.doc.data();
-          newP.id = change.doc.id
-          setNewParticipant(newP);
-        }
-        if (change.type === "removed") {
-          console.log("remove user: ", change.doc.data());
-        }
-      });
-    });
-  }, [])
 
   useEffect(() => {
     if (newParticipant) {
