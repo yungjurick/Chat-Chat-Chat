@@ -3,7 +3,11 @@ import { db, firebaseApp } from '../../firebase'
 import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { setLoading } from '../../reducers/loading';
-import RoomModal from '../../components/RoomModal/RoomModal';
+import RoomModal from '../../components/Modal/RoomModal';
+import {
+	Layout,
+	Container
+} from '../../styles/Chat';
 import styled from 'styled-components';
 
 const ChatList = () => {
@@ -36,6 +40,18 @@ const ChatList = () => {
 		dispatch(setLoading(false));
 	}
 
+	// const navigateToRoom = async (roomId) => {
+
+
+	const onClickRoom = (password, roomId) => {
+		if (password.length > 0) {
+			// PROMPT PASSWORD MODAL
+		} else {
+			// Navigate to Room
+			push(`/chat/room/${roomId}`);
+		}
+	}
+
 	useEffect(() => {
     firebaseApp.auth().onAuthStateChanged(user => {
       const uid = (firebaseApp.auth().currentUser || {}).uid;
@@ -62,11 +78,16 @@ const ChatList = () => {
 					<NavButton secondary>Logout</NavButton>
 				</NavContainer>
 				<List>
-					{rooms.map(({ title, description, id }) => {
+					{rooms.map(({ title, description, id, password }) => {
 						return (
-							<ListItem key={id}>
+							<ListItem key={id} onClick={() => onClickRoom(password, id)}>
 								<ListItemTitle>{title}</ListItemTitle>
 								<ListItemDescription>{description}</ListItemDescription>
+								<ListItemActionContainer>
+									{
+										password.length > 0 ? (<p>Private</p>) : (<p>Public</p>)
+									}
+								</ListItemActionContainer>
 							</ListItem>
 						)
 					})}
@@ -76,24 +97,6 @@ const ChatList = () => {
 		</Layout>
 	)
 }
-
-const Layout = styled.div`
-	width: 100vw;
-	height: 100vh;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: #78C1FF;
-`;
-
-const Container = styled.div`
-	width: 90%;
-	height: 90%;
-	box-shadow: rgba(99, 99, 99, 0.3) 0px 2px 8px 0px;
-	background-color: white;
-	border-radius: 4px;
-	padding: 25px;
-`;
 
 const NavContainer = styled.div`
 	width: 100%;
@@ -137,11 +140,14 @@ const ListItem = styled.div`
 	height: 100%;
 	border-radius: 4px;
 	background-color: #78C1FF;
-	color: white;
+	color: #1d3557;
 	cursor: pointer;
 	transition: all 0.2s;
+	display: flex;
+	flex-direction: column;
 	&:hover {
 		background-color: #1D3556;
+		color: white;
 	}
 `;
 
@@ -154,6 +160,25 @@ const ListItemTitle = styled.p`
 const ListItemDescription = styled.p`
 	padding: 0 12px;
 	font-size: 12px;
+	margin: 0;
 `;
+
+const ListItemActionContainer = styled.div`
+	margin-top: auto;
+	height: 35px;
+	width: 100%;
+	border-top: 1px solid white;
+	border-radius: 0 0 4px 4px;
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	padding: 0 12px;
+	box-sizing: border-box;
+	p {
+		font-weight: bold;
+		font-size: 12px;
+	}
+`
+
 
 export default ChatList

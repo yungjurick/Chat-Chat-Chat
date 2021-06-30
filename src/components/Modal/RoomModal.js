@@ -60,10 +60,15 @@ const RoomModal = ({ isOpened, onClose }) => {
       await roomRef.collection('messages')
         .doc()
         .set({
-          uid: '',
-          content: 'start',
-          nickname: '',
-          created: firebase.firestore.Timestamp.now().seconds
+          userUid: '',
+          userNickname: 'Admin',
+          content: 'START',
+          uid: uuid(),
+          created: firebase.firestore.Timestamp.now().seconds,
+          likes: [],
+          checks: [],
+          parrots: [],
+          frogs: []
         })
 
       dispatch(setLoading(false));
