@@ -3,6 +3,7 @@ import { db, firebaseApp } from '../../firebase'
 import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { setLoading } from '../../reducers/loading';
+import { userLogOut} from '../../reducers/index';
 import RoomModal from '../../components/Modal/RoomModal';
 import {
 	Layout,
@@ -40,9 +41,6 @@ const ChatList = () => {
 		dispatch(setLoading(false));
 	}
 
-	// const navigateToRoom = async (roomId) => {
-
-
 	const onClickRoom = (password, roomId) => {
 		if (password.length > 0) {
 			// PROMPT PASSWORD MODAL
@@ -50,6 +48,12 @@ const ChatList = () => {
 			// Navigate to Room
 			push(`/chat/room/${roomId}`);
 		}
+	}
+
+	const onLogout = async() => {
+		push('/users/login');
+		firebaseApp.auth().signOut()
+		dispatch(userLogOut());
 	}
 
 	useEffect(() => {
@@ -75,7 +79,7 @@ const ChatList = () => {
 						Chat Rooms
 					</NavTitle>
 					<NavButton onClick={() => setIsRoomModalOpen(true)}>Create New Room</NavButton>
-					<NavButton secondary>Logout</NavButton>
+					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
 				<List>
 					{rooms.map(({ title, description, id, password }) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db, firebaseApp, firebase } from '../../firebase'
+import { db, firebase } from '../../firebase'
 import { useParams, useHistory } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { uuid } from 'uuidv4';
 import { Layout, Container } from '../../styles/Chat';
 import { MdKeyboardBackspace } from "react-icons/md";
@@ -9,6 +9,7 @@ import styled from 'styled-components';
 
 const ChatRoom = () => {
   const { roomId } = useParams();
+  const history = useHistory();
   const messageListEndRef = useRef(null);
 
   const [roomName, setRoomName] = useState('');
@@ -67,6 +68,15 @@ const ChatRoom = () => {
     }        
   }
 
+  const handleInputKeyPress = e => {
+    if (e.key === 'Enter') {
+      if (!e.shiftKey) {
+        e.preventDefault();
+        onSubmitMessage();
+      }
+    }
+  }
+
   const convertTimestampToDate = timestamp => {
     const date = new Date(timestamp*1000).toDateString().split(' ');
     const time = new Date(timestamp*1000).toLocaleTimeString().split(':');
@@ -108,47 +118,64 @@ const ChatRoom = () => {
 
     getRoomInfo();
     addUserToRoom();
+
+    return () => {
+      console.log("participants:", participants)
+      if (participants.length === 1) {
+        console.log("Delete Room")
+        db.collection("chatrooms").doc("room_" + roomId).delete();
+      } else {
+        console.log("Remove Participant")
+        db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
+      }
+    }
   }, [])
 
   // Subscriptions on Firestore
 
   useEffect(() => {
-    const unsubscribeChat = () => {
-      const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('messages')
-      chatRef.orderBy("created").onSnapshot((snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const newEntry = change.doc.data();
-            newEntry.id = change.doc.id
-            setNewMessage(newEntry); 
-          }
-          if (change.type === "modified") {
-            const data = change.doc.data();
-            data.id = change.doc.id
-            setModifyMessage(data);  
-          }
-          if (change.type === "removed") {
-            console.log("remove message: ", change.doc.data());
-          }
-        });
-      });
-    }
+    const chatRef = db
+      .collection('chatrooms')
+      .doc('room_' + roomId)
+      .collection('messages')
+      .orderBy("created")
 
-    const unsubscribeParticipant = () => {
-      const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('participants')
-      chatRef.orderBy("entered").onSnapshot((snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const newP = change.doc.data();
-            newP.id = change.doc.id
-            setNewParticipant(newP);
-          }
-          if (change.type === "removed") {
-            console.log("remove user: ", change.doc.data());
-          }
-        });
+    const unsubscribeChat = chatRef.onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const newEntry = change.doc.data();
+          newEntry.id = change.doc.id
+          setNewMessage(newEntry); 
+        }
+        if (change.type === "modified") {
+          const data = change.doc.data();
+          data.id = change.doc.id
+          setModifyMessage(data);  
+        }
+        if (change.type === "removed") {
+          console.log("remove message: ", change.doc.data());
+        }
       });
-    }
+    });
+
+    const participantRef = db
+      .collection('chatrooms')
+      .doc('room_' + roomId)
+      .collection('participants')
+      .orderBy("entered");
+
+    const unsubscribeParticipant = participantRef.onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const newP = change.doc.data();
+          newP.id = change.doc.id
+          setNewParticipant(newP);
+        }
+        if (change.type === "removed") {
+          console.log("remove user: ", change.doc.data());
+        }
+      });
+    });
 
     return () => {
       unsubscribeChat();
@@ -185,32 +212,12 @@ const ChatRoom = () => {
     } 
   }, [newParticipant])
 
-  // Event on Leave
-
-  const onLeaveRoom = async () => {
-    try {
-
-    } catch (e) {
-
-    }
-  }
-
-  useEffect(() => {
-    window.onbeforeunload = () => {
-        return true;
-    };
-
-    return () => {
-        window.onbeforeunload = null;
-    };
-  }, []);
-
   return (
     <Layout>
       <RoomContainer>
         <RoomSidePanel>
           <PanelHeader>
-            <PanelHeaderButton>
+            <PanelHeaderButton onClick={() => history.push('/chat/room')}>
               <MdKeyboardBackspace />
             </PanelHeaderButton>
             <PanelTitle>
@@ -263,7 +270,7 @@ const ChatRoom = () => {
             }
           </MessageList>
           <MessageInputContainer>
-            <MessageTextarea type="text" value={message} onChange={e => onChangeMessage(e)}/>
+            <MessageTextarea type="text" value={message} onChange={e => onChangeMessage(e)} onKeyPress={e => handleInputKeyPress(e)}/>
           </MessageInputContainer>
           <MessageButtonContainer>
               <MessageButton onClick={() => onSubmitMessage()}>
