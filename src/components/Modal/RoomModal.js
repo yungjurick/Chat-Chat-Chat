@@ -36,6 +36,7 @@ const RoomModal = ({ isOpened, onClose }) => {
     } else if (description.length < 5) {
       alert('Your room description is too short. Please make it more than 5 characters.');
     } else {
+      // Initiate Loading
       dispatch(setLoading(true));
       
       const roomId = uuid()
@@ -47,7 +48,8 @@ const RoomModal = ({ isOpened, onClose }) => {
         title,
         description,
         password,
-        id: roomId
+        id: roomId,
+        created: firebase.firestore.Timestamp.now().seconds
       })
 
       await roomRef.collection('participants')
@@ -71,9 +73,10 @@ const RoomModal = ({ isOpened, onClose }) => {
           frogs: []
         })
 
-      dispatch(setLoading(false));
-
       history.push(`/chat/room/${roomId}`)
+
+      // Finish Loading
+      dispatch(setLoading(false));
     }
   }
   

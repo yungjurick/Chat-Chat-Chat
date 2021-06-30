@@ -2,8 +2,8 @@ import { db } from '../firebase'
 
 export const SET_ROOMS = 'SET_ROOMS'
 export const SET_CHAT_ROOM_ID = 'SET_CHAT_ROOM_ID'
-export const INCREMENT_CHAT_PARTICIPANT_COUNT = 'INCREMENT_CHAT_PARTICIPANT_COUNT'
-export const DECREMENT_CHAT_PARTICIPANT_COUNT = 'DECREMENT_CHAT_PARTICIPANT_COUNT'
+export const ADD_CHAT_PARTICIPANT = 'ADD_CHAT_PARTICIPANT'
+export const REMOVE_CHAT_PARTICIPANT = 'REMOVE_CHAT_PARTICIPANT'
 export const RESET_CURRENT_CHAT = 'RESET_CURRENT_CHAT'
 
 export const setRooms = (rooms) => ({
@@ -16,12 +16,14 @@ export const setChatRoomId = (roomId) => ({
   payload: roomId,
 })
 
-export const incrementChatParticipantCount = () => ({
-  type: INCREMENT_CHAT_PARTICIPANT_COUNT,
+export const addChatParticipant = (uid) => ({
+  type: ADD_CHAT_PARTICIPANT,
+  payload: uid
 })
 
-export const decrementChatParticipantCount = () => ({
-  type: DECREMENT_CHAT_PARTICIPANT_COUNT,
+export const removeChatParticipant = (uid) => ({
+  type: REMOVE_CHAT_PARTICIPANT,
+  payload: uid
 })
 
 export const resetCurrentChat = () => ({
@@ -32,7 +34,7 @@ const initialState = {
   roomList: [],
   currentChat: {
     roomId: '',
-    participantCnt: 0
+    participants: []
   }
 }
 
@@ -55,45 +57,52 @@ const chat = (state = initialState, action) => {
       }
     }
 
-    case INCREMENT_CHAT_PARTICIPANT_COUNT: {
+    case ADD_CHAT_PARTICIPANT: {
       return {
         ...state,
         currentChat: {
           ...state.currentChat,
-          participantCnt: state.currentChat.participantCnt + 1
+          participants: [...state.currentChat.participants, action.payload]
         }
       }
     }
 
-    case DECREMENT_CHAT_PARTICIPANT_COUNT: {
-      const prevCnt = state.currentChat.participantCnt;
-      const curCnt = action.payload;
-
-      if (curCnt === 0 && prevCnt === 1) {
-        db.collection("chatrooms").doc("room_" + state.currentChat.roomId).delete();
-      }
+    case REMOVE_CHAT_PARTICIPANT: {
+      const filtered = state.currentChat.participants.filter(p => p !== action.payload);
 
       return {
         ...state,
         currentChat: {
           ...state.currentChat,
-          participantCnt: state.currentChat.participantCnt - 1
+          participants: filtered
         }
       }
     }
 
     case RESET_CURRENT_CHAT: {
-      const prevCnt = state.currentChat.participantCnt;
+      const prevRoomId = state.currentChat.roomId;
+      const prevCnt = state.currentChat.participants.length;
+
+      console.log("PREVIOUS CHAT INFO:", prevCnt, prevRoomId);
 
       if (prevCnt === 1) {
-        db.collection("chatrooms").doc("room_" + state.currentChat.roomId).delete();
-      }
+        // Delete Room from Firebase
+        db.collection("chatrooms").doc("room_" + prevRoomId).delete();
 
-      return {
-        ...state,
-        currentChat: {
-          roomId: '',
-          participantCnt: 0
+        return {
+          roomList: state.roomList.filter(r => r.id !== prevRoomId),
+          currentChat: {
+            roomId: '',
+            participants: []
+          }
+        }
+      } else {
+        return {
+          ...state,
+          currentChat: {
+            roomId: '',
+            participants: []
+          }
         }
       }
     }

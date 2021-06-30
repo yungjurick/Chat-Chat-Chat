@@ -7,9 +7,8 @@ import { Layout, Container } from '../../styles/Chat';
 import { MdKeyboardBackspace } from "react-icons/md";
 import {
   setChatRoomId,
-  incrementChatParticipantCount,
-  decrementChatParticipantCount,
-  resetCurrentChat
+  addChatParticipant,
+  removeChatParticipant,
 } from '../../reducers/chat';
 import styled from 'styled-components';
 
@@ -33,6 +32,7 @@ const ChatRoom = () => {
   const [removeParticipant, setRemoveParticipant] = useState(null);
 
   const userProfile = useSelector(state => state.user.userProfile);
+  const participantCnt = useSelector(state => state.chat.currentChat.participants.length)
 
   const { uid: userUid, nickname } = userProfile;
 
@@ -93,6 +93,8 @@ const ChatRoom = () => {
       try {
         const roomRef = db.collection("chatrooms").doc("room_" + roomId);
         const roomDoc = await roomRef.get();
+
+        console.log(roomDoc.data());
         
         setRoomName(roomDoc.data().title);
         setRoomDesc(roomDoc.data().description);
@@ -127,9 +129,6 @@ const ChatRoom = () => {
     return () => {
       console.log("Remove Participant")
       db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
-
-      // Clear Redux to initial state
-      dispatch(resetCurrentChat());
     }
   }, [])
 
@@ -208,13 +207,18 @@ const ChatRoom = () => {
 
   useEffect(() => {
     if (newParticipant) {
-      console.log("New User To Room:", newParticipant.nickname)
-      const newParticipantList = [...participants]
-      newParticipantList.push(newParticipant)
-      setParticipants(newParticipantList)
+      // Check if user is already in the participants list
+      const alreadyInList = participants.findIndex(p => p === newParticipant.uid) > -1 ? true : false;
+      if (!alreadyInList) {
+        console.log("New User To Room:", newParticipant.nickname)
 
-      // Update Redux
-      dispatch(incrementChatParticipantCount());
+        const newParticipantList = [...participants]
+        newParticipantList.push(newParticipant)
+        setParticipants(newParticipantList)
+
+        // Add Participant to Redux
+        dispatch(addChatParticipant(newParticipant.uid));
+      }
     } 
   }, [newParticipant])
 
@@ -224,8 +228,8 @@ const ChatRoom = () => {
       const newParticipantList = [...participants].filter(p => p.uid !== removeParticipant.uid);
       setParticipants(newParticipantList);
 
-      // Update Redux
-      dispatch(decrementChatParticipantCount());
+      // Remove Participant from Redux
+      dispatch(removeChatParticipant(newParticipant.uid));
     } 
   }, [removeParticipant])
 
@@ -256,7 +260,7 @@ const ChatRoom = () => {
           </PanelHeader>
           <ParticipantListContainer>
             <PanelTitle small>
-              Participants
+              Participants ({participantCnt})
             </PanelTitle>
             <ParticipantList>
               {
@@ -356,10 +360,19 @@ const PanelSubtitle = styled.p`
 `
 
 const ParticipantListContainer = styled.div`
+  display: grid;
+  grid-template-rows: 25px auto;
   padding-top: 16px;
 `
 
-const ParticipantList = styled.div``
+const ParticipantList = styled.div`
+  min-height: 0;
+  max-height: 100%;
+  overflow: scroll;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`
 
 const ParticipantListItem = styled.p`
   color: #1d3557;

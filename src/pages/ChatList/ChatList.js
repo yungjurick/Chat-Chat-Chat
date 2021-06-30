@@ -2,44 +2,88 @@ import React, { useState, useEffect } from 'react';
 import { db, firebaseApp } from '../../firebase'
 import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { setLoading } from '../../reducers/loading';
+import {
+  CSSTransition,
+  TransitionGroup,
+} from 'react-transition-group';
 import { userLogOut} from '../../reducers/index';
+import { resetCurrentChat, setRooms } from '../../reducers/chat';
 import RoomModal from '../../components/Modal/RoomModal';
 import {
 	Layout,
 	Container
 } from '../../styles/Chat';
+import '../../styles/transitions.css';
 import styled from 'styled-components';
 
 const ChatList = () => {
 	const { push } = useHistory();
 	const dispatch = useDispatch();
 	const userProfile = useSelector(state => state.user.userProfile);
+	const rooms = useSelector(state => state.chat.roomList);
 
-	const [rooms, setRooms] = useState([]);
+	const [newRoom, setNewRoom] = useState(null);
+	const [removeRoom, setRemoveRoom] = useState(null);
+
 	const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
 
 	console.log(rooms);
 
 	const onCloseRoomModal = () => setIsRoomModalOpen(prev => !prev);
 
-	const fetchChatRooms = async () => {
-		dispatch(setLoading(true));
-		try {
-			const querySnapshot = await db.collection('chatrooms').get();
-			const updatedRooms = []
-			querySnapshot.forEach((doc) => {
-				console.log(doc.data())
-				updatedRooms.push(doc.data());
-			});
+	// Subscriptions on Firestore
+	useEffect(() => {
+		// Reset Redux State for Chat
+		dispatch(resetCurrentChat());
 
-			setRooms(updatedRooms);
-		} catch (e) {
-			console.log(e);
+		const roomRef = db
+			.collection('chatrooms')
+			.orderBy("created")
+
+		const unsubscribeRoom = roomRef.onSnapshot((snapshot) => {
+			snapshot.docChanges().forEach((change) => {
+				if (change.type === "added") {
+					const newRoom = change.doc.data();
+					setNewRoom(newRoom);
+				}
+				if (change.type === "removed") {
+					console.log("remove room: ", change.doc.data());
+					const removeRoom = change.doc.data();
+          setRemoveRoom(removeRoom);
+				}
+			});
+		});
+
+		return () => {
+			unsubscribeRoom();
 		}
 
-		dispatch(setLoading(false));
-	}
+	}, [])
+
+	useEffect(() => {
+    if (newRoom) {
+			console.log("New Chat Room:", newRoom)
+
+			const newRooms = [...rooms]
+			newRooms.push(newRoom)
+			dispatch(setRooms(newRooms))
+
+			// Add Participant to Redux
+			// dispatch(addChatParticipant(newParticipant.uid));
+    } 
+  }, [newRoom])
+
+  useEffect(() => {
+    if (removeRoom) {
+      console.log("Remove Room:", removeRoom)
+      const newRooms = [...rooms].filter(r => r.id !== `${removeRoom.id}`);
+      dispatch(setRooms(newRooms))
+
+      // Remove Participant from Redux
+      // dispatch(removeChatParticipant(newParticipant.uid));
+    } 
+  }, [removeRoom])
+
 
 	const onClickRoom = (password, roomId) => {
 		if (password.length > 0) {
@@ -69,38 +113,51 @@ const ChatList = () => {
     });
   }, [userProfile, push]);
 
-	useEffect(() => fetchChatRooms(), [])
-
 	return (
 		<Layout>
-			<Container>
+			<ChatListContainer>
 				<NavContainer>
 					<NavTitle>
-						Chat Rooms
+						Live Chat Rooms
 					</NavTitle>
 					<NavButton onClick={() => setIsRoomModalOpen(true)}>Create New Room</NavButton>
 					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
 				<List>
-					{rooms.map(({ title, description, id, password }) => {
-						return (
-							<ListItem key={id} onClick={() => onClickRoom(password, id)}>
-								<ListItemTitle>{title}</ListItemTitle>
-								<ListItemDescription>{description}</ListItemDescription>
-								<ListItemActionContainer>
-									{
-										password.length > 0 ? (<p>Private</p>) : (<p>Public</p>)
-									}
-								</ListItemActionContainer>
-							</ListItem>
-						)
-					})}
+					<TransitionGroup>
+					{
+						rooms.map(({ title, description, id, password }) => {
+							return (
+								<CSSTransition
+									key={id}
+									timeout={500}
+									classNames="item"
+								>
+									<ListItem onClick={() => onClickRoom(password, id)}>
+										<ListItemTitle>{title}</ListItemTitle>
+										<ListItemDescription>{description}</ListItemDescription>
+										<ListItemActionContainer>
+											{
+												password.length > 0 ? (<p>Private</p>) : (<p>Public</p>)
+											}
+										</ListItemActionContainer>
+									</ListItem>
+								</CSSTransition>
+							)
+						})
+					}
+					</TransitionGroup>
 				</List>
-			</Container>
+			</ChatListContainer>
 			<RoomModal isOpened={isRoomModalOpen} onClose={onCloseRoomModal}/>
 		</Layout>
 	)
 }
+
+const ChatListContainer = styled(Container)`
+	display: grid;
+	grid-template-rows: 10% 90%;
+`
 
 const NavContainer = styled.div`
 	width: 100%;
@@ -109,6 +166,7 @@ const NavContainer = styled.div`
 	align-items: center;
 	border-bottom: 1px solid #EEEEEE;
 	padding-bottom: 25px;
+	margin-bottom: 16px;
 `;
 
 const NavTitle = styled.h1`
@@ -130,13 +188,17 @@ const NavButton = styled.button`
 `;
 
 const List = styled.div`
-	padding: 12px 0;
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	grid-auto-rows: 150px;
-	column-gap: 10px;
-	row-gap: 10px;
-	height: 90%;
+	column-gap: 20px;
+	row-gap: 20px;
+	max-height: 100%;
+  min-height: 0;
+  overflow: scroll;
+	&::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const ListItem = styled.div`
@@ -146,12 +208,14 @@ const ListItem = styled.div`
 	background-color: #78C1FF;
 	color: #1d3557;
 	cursor: pointer;
-	transition: all 0.2s;
+	transition: all 0.3s cubic-bezier(.25,.8,.25,1);
 	display: flex;
 	flex-direction: column;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 	&:hover {
 		background-color: #1D3556;
 		color: white;
+		box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 	}
 `;
 

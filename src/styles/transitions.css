@@ -1,0 +1,32 @@
+/* .list-enter {
+  opacity: 0.01;
+}
+
+.list-enter.list-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease-in;
+}
+
+.list-exit {
+  opacity: 1;
+}
+
+.list-exit-active {
+  opacity: 0.01;
+  transition: opacity 300ms ease-in;
+} */
+
+.item-enter {
+  opacity: 0;
+}
+.item-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease-in;
+}
+.item-exit {
+  opacity: 1;
+}
+.item-exit-active {
+  opacity: 0;
+  transition: opacity 500ms ease-in;
+}
