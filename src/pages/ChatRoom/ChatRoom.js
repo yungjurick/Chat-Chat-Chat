@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, firebase } from '../../firebase'
 import { useParams, useHistory } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { uuid } from 'uuidv4';
 import { Layout, Container } from '../../styles/Chat';
 import { MdKeyboardBackspace } from "react-icons/md";
+import {
+  setChatRoomId,
+  incrementChatParticipantCount,
+  decrementChatParticipantCount,
+  resetCurrentChat
+} from '../../reducers/chat';
 import styled from 'styled-components';
 
 const ChatRoom = () => {
   const { roomId } = useParams();
   const history = useHistory();
+  const dispatch = useDispatch();
   const messageListEndRef = useRef(null);
 
   const [roomName, setRoomName] = useState('');
@@ -23,6 +30,7 @@ const ChatRoom = () => {
   const [modifyMessage, setModifyMessage] = useState(null);
 
   const [newParticipant, setNewParticipant] = useState(null);
+  const [removeParticipant, setRemoveParticipant] = useState(null);
 
   const userProfile = useSelector(state => state.user.userProfile);
 
@@ -57,14 +65,6 @@ const ChatRoom = () => {
       } catch (e) {
         console.log(e)
       }
-
-      // Scroll Behavior
-    
-      console.log(messageListEndRef);
-      const childCount = messageListEndRef.current?.childElementCount;
-      const lastChild = messageListEndRef.current?.children[childCount - 1]
-
-      lastChild.scrollIntoView({ behavior: 'smooth'});
     }        
   }
 
@@ -83,6 +83,8 @@ const ChatRoom = () => {
 
     return `${time[0]}:${time[1]}, ${date[2]} ${date[1]}`
   }
+
+  // Initial Fetch For Room Data
 
   useEffect(() => {
     const { uid, nickname } = userProfile;
@@ -119,15 +121,15 @@ const ChatRoom = () => {
     getRoomInfo();
     addUserToRoom();
 
+    // Update Redux with Room Id
+    dispatch(setChatRoomId(roomId));
+
     return () => {
-      console.log("participants:", participants)
-      if (participants.length === 1) {
-        console.log("Delete Room")
-        db.collection("chatrooms").doc("room_" + roomId).delete();
-      } else {
-        console.log("Remove Participant")
-        db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
-      }
+      console.log("Remove Participant")
+      db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
+
+      // Clear Redux to initial state
+      dispatch(resetCurrentChat());
     }
   }, [])
 
@@ -145,7 +147,7 @@ const ChatRoom = () => {
         if (change.type === "added") {
           const newEntry = change.doc.data();
           newEntry.id = change.doc.id
-          setNewMessage(newEntry); 
+          setNewMessage(newEntry);
         }
         if (change.type === "modified") {
           const data = change.doc.data();
@@ -168,11 +170,12 @@ const ChatRoom = () => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const newP = change.doc.data();
-          newP.id = change.doc.id
           setNewParticipant(newP);
         }
         if (change.type === "removed") {
           console.log("remove user: ", change.doc.data());
+          const removeP = change.doc.data();
+          setRemoveParticipant(removeP);
         }
       });
     });
@@ -190,7 +193,7 @@ const ChatRoom = () => {
       const cp = [...chats]
       cp.push(newMessage)
       setChats(cp)
-    } 
+    }
   }, [newMessage])
 
   useEffect(() => {
@@ -205,12 +208,36 @@ const ChatRoom = () => {
 
   useEffect(() => {
     if (newParticipant) {
-      console.log("New User To Room")
+      console.log("New User To Room:", newParticipant.nickname)
       const newParticipantList = [...participants]
       newParticipantList.push(newParticipant)
       setParticipants(newParticipantList)
+
+      // Update Redux
+      dispatch(incrementChatParticipantCount());
     } 
   }, [newParticipant])
+
+  useEffect(() => {
+    if (removeParticipant) {
+      console.log("Remove User From Room:", removeParticipant.nickname)
+      const newParticipantList = [...participants].filter(p => p.uid !== removeParticipant.uid);
+      setParticipants(newParticipantList);
+
+      // Update Redux
+      dispatch(decrementChatParticipantCount());
+    } 
+  }, [removeParticipant])
+
+  useEffect(() => {
+    if (messageListEndRef) {
+      const childCount = messageListEndRef.current?.childElementCount;
+      const lastChild = messageListEndRef.current?.children[childCount - 1]
+      if (lastChild) {
+        lastChild.scrollIntoView({ behavior: 'smooth'});
+      }
+    }
+  }, [chats])
 
   return (
     <Layout>
