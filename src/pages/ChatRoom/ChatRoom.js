@@ -62,8 +62,6 @@ const ChatRoom = () => {
   const { uid: userUid, nickname } = userProfile;
 
   const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
-    console.log(emojiUid, messageUid, isRemove);
-
     const emojiRef = db
       .collection('chatrooms')
       .doc('room_' + roomId)
@@ -283,7 +281,6 @@ const ChatRoom = () => {
 
       emojiRef.onSnapshot((snapshot) => {
         snapshot.docChanges().forEach((change) => {
-          console.log("Emoji Snapshot Logged");
           if (change.type === "added") {
             const newEmoji = change.doc.data();
             newEmoji.id = change.doc.id
@@ -295,7 +292,7 @@ const ChatRoom = () => {
             setModifyEmoji(data);  
           }
           if (change.type === "removed") {
-            console.log("remove message: ", change.doc.data());
+            console.log("removed emoji: ", change.doc.data());
           }
         });
       });
@@ -424,7 +421,7 @@ const ChatRoom = () => {
 
   const alertUser = e => {
     e.preventDefault();
-    e.returnValue = ''
+    e.returnValue = '';
   }
 
   const handleTabClosing = () => {

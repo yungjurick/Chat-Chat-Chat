@@ -60,7 +60,7 @@ const Login = () => {
 	return (
 		<Layout>
 			<Container>
-				<Header>Login to Chat App</Header>
+				<Header>Login 🔑</Header>
 
 				<FormLabel>Email</FormLabel>
 				<FormTextInput type="text" value={email} onChange={e => onChangeLoginObject(e, 'email')}/>
@@ -73,7 +73,7 @@ const Login = () => {
 				</FormButton>
 
 				<FormSubtitle>
-					<Link to="/users/signup">New to Chat App?</Link>
+					<Link to="/users/signup">New to Chat-Chat-Chat?</Link>
 				</FormSubtitle>
 
 			</Container>

@@ -1,9 +1,23 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const MessageContent = ({ isUser, content }) => {
+const MessageContent = ({
+  messageUserUid,
+  userUid,
+  content,
+  messageUid,
+  onSelectEmoji,
+  likeEmojiUid,
+  hasClickedLike
+}) => {
+  const handleDoubleClick = () => {
+    if (messageUserUid !== '') {
+      onSelectEmoji(likeEmojiUid, messageUid, hasClickedLike);
+    }
+  }
+
   return (
-    <MessageContentParag isUser={isUser}>
+    <MessageContentParag isUser={messageUserUid === userUid} onDoubleClick={() => handleDoubleClick()}>
       {content}
     </MessageContentParag>
   )
@@ -19,4 +33,11 @@ const MessageContentParag = styled.p`
   margin: 10px 0 0 0;
 `
 
-export default MessageContent
+const areEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.hasClickedLike === nextProps.hasClickedLike
+  )
+}
+
+export default React.memo(MessageContent, areEqual)

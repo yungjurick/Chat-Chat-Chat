@@ -137,8 +137,8 @@ const ChatList = () => {
 					<NavButton onClick={() => dispatch(setChatRoomModalStatus(true))}>Create New Room</NavButton>
 					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
-				<TransitionGroup>
-					<List>
+				<List>
+					{/* <TransitionGroup> */}
 					{
 						rooms.map(({ title, description, id, password }) => {
 							return (
@@ -160,8 +160,8 @@ const ChatList = () => {
 							)
 						})
 					}
-					</List>
-				</TransitionGroup>
+					{/* </TransitionGroup> */}
+				</List>
 			</ChatListContainer>
 			{
 				isChatRoomModalOpen && <RoomModal />

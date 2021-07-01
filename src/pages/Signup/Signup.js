@@ -129,7 +129,7 @@ const Signup = () => {
 	return (
 		<Layout>
 			<Container>
-				<Header>Sign up to Chat App</Header>
+				<Header>Sign up ✍️</Header>
 
 				<FormLabel>Email</FormLabel>
 				<FormTextInput type="text" value={email} onChange={e => onChangeUserObject(e, 'email')}/>

@@ -16,6 +16,9 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import MessageContent from './MessageContent';
 
+// CONSTANT
+const LIKE_EMOJI_UID = 'DaZVIfmk2ij5HZsqnOlv';
+
 const convertTimestampToDate = timestamp => {
   const date = new Date(timestamp*1000).toDateString().split(' ');
   const time = new Date(timestamp*1000).toLocaleTimeString().split(':');
@@ -48,10 +51,19 @@ const Message = ({
   const isEmojiSelectModalOpen = useSelector(state => state.modal.isEmojiSelectModalOpen);
 
   const isUser = userUid === messageUserUid;
+  const hasUserClickedLike = () => {
+    if (
+      Object.keys(emojis).length > 0 &&
+      LIKE_EMOJI_UID in emojis
+    ) {
+      return emojis[LIKE_EMOJI_UID]['clickedUserUids'].findIndex(uid => uid === userUid) >= 0;
+    } else {
+      return false;
+    }
+  }
 
   // Hover Events
   const onMouseEnterHandler = messageId => {
-    console.log(messageId);
     setHoveredMessageUid(messageId);
   };
   const onMouseLeaveHandler = () => {
@@ -77,8 +89,6 @@ const Message = ({
         return;
     }
   }
-
-  console.log("Message");
   
   return (
     <MessageRow
@@ -91,7 +101,15 @@ const Message = ({
         <MessageSubtitle>{convertTimestampToDate(created)}</MessageSubtitle>
       </MessageHeader>
       <MessageContentWrapper isUser={isUser}>
-        <MessageContent isUser={isUser} content={content} />
+        <MessageContent
+          messageUserUid={messageUserUid}
+          userUid={userUid}
+          content={content}
+          messageUid={messageUid}
+          onSelectEmoji={onSelectEmoji}
+          likeEmojiUid={LIKE_EMOJI_UID}
+          hasClickedLike={hasUserClickedLike}
+        />
       </MessageContentWrapper>
       {
         Object.keys(emojis).length > 0 && (
@@ -118,7 +136,9 @@ const Message = ({
         )
       }
       {
-        hoveredMessageUid === messageUid && (
+        hoveredMessageUid === messageUid &&
+        messageUserUid !== '' &&
+        (
           <MessageUtilContainer>
             <MessageUtilIconWrapper onClick={() => onClickIcon('emoji', messageUid)}>
               <MdInsertEmoticon/>

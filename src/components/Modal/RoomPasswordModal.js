@@ -21,15 +21,12 @@ const RoomPasswordModal = ({ roomId, roomPw }) => {
 
   const onChangePassword = e => setEnteredRoomPw(e.target.value);
 
-  console.log(roomId, roomPw);
-
   const onSubmit = async () => {
     if (roomPw === enteredRoomPw) {
       history.push(`/chat/room/${roomId}`)
       dispatch(setChatRoomPasswordModalStatus(false));
     } else {
       alert('Incorrect Password. Please Enter the Correct Password.');
-      console.log(roomPw, enteredRoomPw);
     }
   }
   
