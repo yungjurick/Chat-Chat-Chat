@@ -67,9 +67,6 @@ const ChatList = () => {
 			const newRooms = [...rooms]
 			newRooms.push(newRoom)
 			dispatch(setRooms(newRooms))
-
-			// Add Participant to Redux
-			// dispatch(addChatParticipant(newParticipant.uid));
     } 
   }, [newRoom])
 
@@ -78,9 +75,6 @@ const ChatList = () => {
       console.log("Remove Room:", removeRoom)
       const newRooms = [...rooms].filter(r => r.id !== `${removeRoom.id}`);
       dispatch(setRooms(newRooms))
-
-      // Remove Participant from Redux
-      // dispatch(removeChatParticipant(newParticipant.uid));
     } 
   }, [removeRoom])
 

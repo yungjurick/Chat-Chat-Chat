@@ -40,11 +40,12 @@ const ChatRoom = () => {
 
   const onSubmitMessage = async () => {
     if (message.length > 0) {
+      const messageUid = uuid();
       const messagePayload = {
         userUid,
         userNickname: nickname,
         content: message,
-        uid: uuid(),
+        uid: messageUid,
         created: firebase.firestore.Timestamp.now().seconds,
         // Emoji Section
         likes: [],
@@ -60,7 +61,7 @@ const ChatRoom = () => {
         // Add message to Firestore
         const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('messages')
         await chatRef
-          .doc()
+          .doc(messageUid)
           .set(messagePayload)
       } catch (e) {
         console.log(e)
@@ -84,11 +85,14 @@ const ChatRoom = () => {
     return `${time[0]}:${time[1]}, ${date[2]} ${date[1]}`
   }
 
+  const removeUserFromFirestore = (roomId, uid) => {
+    console.log("Remove Participant")
+    db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
+  }
+
   // Initial Fetch For Room Data
 
   useEffect(() => {
-    const { uid, nickname } = userProfile;
-
     const getRoomInfo = async () => {
       try {
         const roomRef = db.collection("chatrooms").doc("room_" + roomId);
@@ -111,7 +115,7 @@ const ChatRoom = () => {
         await participantRef
           .doc(userUid)
           .set({
-            uid,
+            uid: userUid,
             nickname,
             entered: firebase.firestore.Timestamp.now().seconds
           })
@@ -127,8 +131,7 @@ const ChatRoom = () => {
     dispatch(setChatRoomId(roomId));
 
     return () => {
-      console.log("Remove Participant")
-      db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
+      removeUserFromFirestore(roomId, userUid);
     }
   }, [])
 
@@ -232,6 +235,30 @@ const ChatRoom = () => {
       dispatch(removeChatParticipant(newParticipant.uid));
     } 
   }, [removeParticipant])
+
+  // Event Listener
+  // - Catch browser leave or close
+  // - Remove user in chat from firestore before closing
+
+  const alertUser = e => {
+    e.preventDefault();
+    e.returnValue = ''
+  }
+
+  const handleTabClosing = () => {
+    removeUserFromFirestore(roomId, userUid);
+  }
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', alertUser)
+    window.addEventListener('unload', handleTabClosing)
+    return () => {
+        window.removeEventListener('beforeunload', alertUser)
+        window.removeEventListener('unload', handleTabClosing)
+    }
+  })
+
+  // Scrolling Behavior for New Messages
 
   useEffect(() => {
     if (messageListEndRef) {
