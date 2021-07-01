@@ -8,6 +8,7 @@ export const SET_CHAT_ROOM_PW = 'SET_CHAT_ROOM_PW'
 export const ADD_CHAT_PARTICIPANT = 'ADD_CHAT_PARTICIPANT'
 export const REMOVE_CHAT_PARTICIPANT = 'REMOVE_CHAT_PARTICIPANT'
 export const RESET_CURRENT_CHAT = 'RESET_CURRENT_CHAT'
+export const SET_CHAT_MODERATOR = 'SET_CHAT_MODERATOR'
 
 export const setRooms = (rooms) => ({
   type: SET_ROOMS,
@@ -34,14 +35,19 @@ export const setChatRoomPw = (pw) => ({
   payload: pw,
 })
 
-export const addChatParticipant = (uid) => ({
+export const addChatParticipant = (p) => ({
   type: ADD_CHAT_PARTICIPANT,
-  payload: uid
+  payload: p
 })
 
-export const removeChatParticipant = (uid) => ({
+export const removeChatParticipant = (p) => ({
   type: REMOVE_CHAT_PARTICIPANT,
-  payload: uid
+  payload: p
+})
+
+export const setChatModerator = (p) => ({
+  type: SET_CHAT_MODERATOR,
+  payload: p
 })
 
 export const resetCurrentChat = () => ({
@@ -54,7 +60,8 @@ const initialState = {
     roomId: '',
     roomTitle: '',
     roomDesc: '',
-    participants: []
+    participants: [],
+    moderator: null
   }
 }
 
@@ -129,6 +136,16 @@ const chat = (state = initialState, action) => {
       }
     }
 
+    case SET_CHAT_MODERATOR: {
+      return {
+        ...state,
+        currentChat: {
+          ...state.currentChat,
+          moderator: action.payload
+        }
+      }
+    }
+
     case RESET_CURRENT_CHAT: {
       const prevRoomId = state.currentChat.roomId;
       const prevCnt = state.currentChat.participants.length;
@@ -146,18 +163,21 @@ const chat = (state = initialState, action) => {
             roomTitle: '',
             roomDesc: '',
             roomPw: '',
-            participants: []
+            participants: [],
+            moderator: null
           }
         }
       } else {
         return {
           ...state,
+          roomList: [],
           currentChat: {
             roomId: '',
             roomTitle: '',
             roomDesc: '',
             roomPw: '',
-            participants: []
+            participants: [],
+            moderator: null
           }
         }
       }

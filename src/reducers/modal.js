@@ -1,4 +1,5 @@
 export const SET_CHAT_ROOM_MODAL_STATUS = "SET_CHAT_ROOM_MODAL_STATUS"
+export const SET_CHAT_ROOM_PASSWORD_MODAL_STATUS = "SET_CHAT_ROOM_PASSWORD_MODAL_STATUS"
 export const SET_MESSAGE_DELETE_MODAL_STATUS = "SET_MESSAGE_DELETE_MODAL_STATUS"
 export const SET_MESSAGE_EDIT_MODAL_STATUS = "SET_MESSAGE_EDIT_MODAL_STATUS"
 export const SET_EMOJI_SELECT_MODAL_STATUS = "SET_EMOJI_SELECT_MODAL_STATUS"
@@ -8,6 +9,11 @@ export const SET_TARGET_MESSAGE_CONTENT = "SET_TARGET_MESSAGE_CONTENT"
 
 export const setChatRoomModalStatus = (status) => ({
   type: SET_CHAT_ROOM_MODAL_STATUS,
+  payload: status
+})
+
+export const setChatRoomPasswordModalStatus = (status) => ({
+  type: SET_CHAT_ROOM_PASSWORD_MODAL_STATUS,
   payload: status
 })
 
@@ -38,6 +44,7 @@ export const setTargetMessageContent = (content) => ({
 
 const initialState = {
   isChatRoomModalOpen: false,
+  isChatRoomPasswordModalOpen: false,
   isMessageDeleteModalOpen: false,
   isMessageEditModalOpen: false,
   isEmojiSelectModalOpen: false,
@@ -51,6 +58,13 @@ const modal = (state = initialState, action) => {
       return {
         ...state,
         isChatRoomModalOpen: action.payload,
+      }
+    }
+
+    case SET_CHAT_ROOM_PASSWORD_MODAL_STATUS:{
+      return {
+        ...state,
+        isChatRoomPasswordModalOpen: action.payload,
       }
     }
 

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
 import { db, firebase } from '../../firebase'
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -8,13 +7,17 @@ import { uuid } from 'uuidv4';
 import { setChatRoomModalStatus } from '../../reducers/modal';
 
 import {
+  RoomModalLayout,
+  RoomModalContainer
+} from '../../styles/Modal'
+import {
 	Header,
 	FormLabel,
 	FormTextInput,
 	FormButton
 } from '../../styles/Form'
 
-const RoomModal = ({ isOpened }) => {
+const RoomModal = () => {
   const history = useHistory();
   const dispatch = useDispatch();
 
@@ -65,7 +68,7 @@ const RoomModal = ({ isOpened }) => {
         .set({
           userUid: '',
           userNickname: 'Admin',
-          content: 'START',
+          content: 'Welcome to the Chat Room! Feel free to talk amongst yourself ;)',
           uid: uuid(),
           created: firebase.firestore.Timestamp.now().seconds,
           likes: [],
@@ -78,6 +81,7 @@ const RoomModal = ({ isOpened }) => {
 
       // Finish Loading
       dispatch(setLoading(false));
+      dispatch(setChatRoomModalStatus(false));
     }
   }
   
@@ -95,7 +99,7 @@ const RoomModal = ({ isOpened }) => {
   const { nickname, uid } = useSelector((state) => (state.user.userProfile || { nickname: '', uid: ''}));
 
 	return (
-    <RoomModalLayout isOpened={isOpened}>
+    <RoomModalLayout>
       <RoomModalContainer>
         <Header>Create a New Room</Header>
 
@@ -114,26 +118,5 @@ const RoomModal = ({ isOpened }) => {
     </RoomModalLayout>
   )
 }
-
-const RoomModalLayout = styled.div`
-  position: fixed;
-  height: 100vh;
-  width: 100vw;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 90;
-  background-color: rgba(0, 0, 0, 0.3);
-  display: ${props => props.isOpened ? 'flex' : 'none'};
-`
-
-const RoomModalContainer = styled.div`
-  width: 400px;
-  height: auto;
-  background-color: white;
-  border-radius: 4px;
-  box-shadow: rgba(99, 99, 99, 0.3) 0px 2px 8px 0px;
-  padding: 24px 32px;
-`
 
 export default RoomModal

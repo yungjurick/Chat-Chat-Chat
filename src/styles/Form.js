@@ -26,6 +26,8 @@ const Header = styled.h1`
 `
 
 const FormLabel = styled.p`
+  max-width: 60%;
+  line-height: 1.5;
   align-self: ${props => props.row ? "center" : "flex-start"};
   font-size: ${props => props.row ? "10px" : "12px"};
   margin: 0;

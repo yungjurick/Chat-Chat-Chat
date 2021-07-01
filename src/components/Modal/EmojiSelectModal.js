@@ -6,12 +6,24 @@ import {
   Container,
   Header
 } from '../../styles/Modal';
+import {
+  setEmojiSelectModalStatus,
+  setTargetMessageUid
+} from '../../reducers/modal'
+import { useDispatch } from 'react-redux';
 
-const EmojiSelectModal = ({ onClose, emojiList, onSelectEmoji, targetMessageUid }) => {
-  
+const EmojiSelectModal = ({ emojiList, onSelectEmoji, targetMessageUid }) => {
+  const dispatch = useDispatch();
+
+  const handleOnClose = () => {
+    dispatch(setEmojiSelectModalStatus(false));
+    dispatch(setTargetMessageUid(''));
+  }
+
+  // Emoji Select Box Logic
   const handleOnSelect = (emojiUid, messageUid) => {
     onSelectEmoji(emojiUid, messageUid);
-    onClose();
+    handleOnClose();
   }
 
   return (
@@ -19,7 +31,7 @@ const EmojiSelectModal = ({ onClose, emojiList, onSelectEmoji, targetMessageUid 
       <Container>
         <Header>
           <p>Add Reaction</p>
-          <MdClose size="1.4em" onClick={() => onClose()}/>
+          <MdClose size="1.4em" onClick={() => handleOnClose()}/>
         </Header>
         <EmojiGrid>
           {

@@ -8,13 +8,17 @@ import {
 } from 'react-transition-group';
 import { userLogOut} from '../../reducers/index';
 import { resetCurrentChat, setRooms } from '../../reducers/chat';
-import RoomModal from '../../components/Modal/RoomModal';
 import {
 	Layout,
 	Container
 } from '../../styles/Chat';
 import '../../styles/transitions.css';
-import { setChatRoomModalStatus } from '../../reducers/modal';
+import {
+	setChatRoomModalStatus,
+	setChatRoomPasswordModalStatus
+} from '../../reducers/modal';
+import RoomModal from '../../components/Modal/RoomModal';
+import RoomPasswordModal from '../../components/Modal/RoomPasswordModal';
 import styled from 'styled-components';
 
 const ChatList = () => {
@@ -24,9 +28,15 @@ const ChatList = () => {
 	const [newRoom, setNewRoom] = useState(null);
 	const [removeRoom, setRemoveRoom] = useState(null);
 
+	const [selectedRoom, setSelectedRoom] = useState({
+		roomId: '',
+		roomPw: ''
+	})
+
 	const userProfile = useSelector(state => state.user.userProfile);
 	const rooms = useSelector(state => state.chat.roomList);
 	const isChatRoomModalOpen = useSelector(state => state.modal.isChatRoomModalOpen);
+	const isChatRoomPasswordModalOpen = useSelector(state => state.modal.isChatRoomPasswordModalOpen);
 
 	console.log(rooms);
 
@@ -61,11 +71,18 @@ const ChatList = () => {
 
 	useEffect(() => {
     if (newRoom) {
-			console.log("New Chat Room:", newRoom)
+			console.log("New Chat Room:", newRoom, rooms)
 
-			const newRooms = [...rooms]
-			newRooms.push(newRoom)
-			dispatch(setRooms(newRooms))
+			// Check if room is already in the rooms list
+      const alreadyInList = rooms.findIndex(r => r.id === newRoom.id) >= 0;
+
+			console.log(alreadyInList)
+
+			if (!alreadyInList) {
+				const newRooms = [...rooms]
+				newRooms.push(newRoom)
+				dispatch(setRooms(newRooms))
+			}
     } 
   }, [newRoom])
 
@@ -79,8 +96,13 @@ const ChatList = () => {
 
 
 	const onClickRoom = (password, roomId) => {
+		console.log("Clicked Room: ", roomId, password);
 		if (password.length > 0) {
-			// PROMPT PASSWORD MODAL
+			setSelectedRoom({
+				roomId,
+				password
+			})
+			dispatch(setChatRoomPasswordModalStatus(true));
 		} else {
 			// Navigate to Room
 			push(`/chat/room/${roomId}`);
@@ -115,8 +137,8 @@ const ChatList = () => {
 					<NavButton onClick={() => dispatch(setChatRoomModalStatus(true))}>Create New Room</NavButton>
 					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
-				<List>
-					<TransitionGroup>
+				<TransitionGroup>
+					<List>
 					{
 						rooms.map(({ title, description, id, password }) => {
 							return (
@@ -138,10 +160,15 @@ const ChatList = () => {
 							)
 						})
 					}
-					</TransitionGroup>
-				</List>
+					</List>
+				</TransitionGroup>
 			</ChatListContainer>
-			<RoomModal isOpened={isChatRoomModalOpen}/>
+			{
+				isChatRoomModalOpen && <RoomModal />
+			}
+			{
+				isChatRoomPasswordModalOpen && <RoomPasswordModal roomId={selectedRoom.roomId} roomPw={selectedRoom.password} />
+			}
 		</Layout>
 	)
 }

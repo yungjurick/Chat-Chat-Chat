@@ -4,21 +4,21 @@ import { useParams, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { uuid } from 'uuidv4';
 import { Layout, Container } from '../../styles/Chat';
-import { MdKeyboardBackspace } from "react-icons/md";
 import {
   setChatRoomId,
   addChatParticipant,
   removeChatParticipant,
   setChatRoomTitle,
   setChatRoomDesc,
-  setChatRoomPw
+  setChatRoomPw,
+  setChatModerator
 } from '../../reducers/chat';
-import { setEmojiSelectModalStatus } from '../../reducers/modal'
 import styled from 'styled-components';
 
 import EmojiSelectModal from '../../components/Modal/EmojiSelectModal';
 import Message from './Message';
-import MessageInput from './MessageInput'
+import MessageInput from './MessageInput';
+import ChatRoomPanel from './ChatRoomPanel';
 import MessageDeleteModal from '../../components/Modal/MessageDeleteModal';
 import MessageEditModal from '../../components/Modal/MessageEditModal';
 
@@ -50,6 +50,7 @@ const ChatRoom = () => {
   const roomDesc = useSelector(state => state.chat.currentChat.roomDesc);
   const roomPw = useSelector(state => state.chat.currentChat.roomPw);
   const participants = useSelector(state => state.chat.currentChat.participants);
+  const moderator = useSelector(state => state.chat.currentChat.moderator);
 
   // Modal Redux State
   const isEmojiSelectModalOpen = useSelector(state => state.modal.isEmojiSelectModalOpen);
@@ -59,9 +60,6 @@ const ChatRoom = () => {
   const targetMessageContent = useSelector(state => state.modal.targetMessageContent);
 
   const { uid: userUid, nickname } = userProfile;
-
-  // Emoji Select Box Logic
-  const onCloseEmojiSelectModal = () => dispatch(setEmojiSelectModalStatus(false));
 
   const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
     console.log(emojiUid, messageUid, isRemove);
@@ -98,11 +96,11 @@ const ChatRoom = () => {
           })
       }
     } catch (e) {
-      // If it does not exist, create a new document
       console.log("Error in Updating Emoji Click.", e)
       notUpdated = true;
     }
 
+    // If it does not exist, create a new document
     if (notUpdated) {
       console.log("Creating New Emoji Doc in Message.")
       try {
@@ -374,6 +372,14 @@ const ChatRoom = () => {
 
   useEffect(() => {
     if (newParticipant) {
+      
+      // If no moderator, set new user as moderator
+      // Or, new user has entered earlier than moderator
+      // - Double-checking since order of array is not guaranteed
+      if (moderator == null || (moderator.entered > newParticipant.entered)) {
+        dispatch(setChatModerator(newParticipant))
+      }
+
       // Check if user is already in the participants list
       const alreadyInList = participants.findIndex(p => p.uid === newParticipant.uid) >= 0;
 
@@ -391,8 +397,24 @@ const ChatRoom = () => {
     if (removeParticipant) {
       console.log("Remove User From Room:", removeParticipant.nickname)
 
+      // If the leaving user is the moderator and there are more than one person in the room
+      if (moderator.uid === removeParticipant.uid && participants.length > 1) {
+        const sortedParticipants = participants.sort((a, b) => (a.entered > b.entered) ? 1 : -1)
+        dispatch(setChatModerator(sortedParticipants[1]))
+      }
+
+      // If moderator kicked me out
+      if (
+        moderator.uid !== userUid &&
+        removeParticipant.uid === userUid &&
+        participants.length > 1
+      ) {
+        alert("You've been kicked out of the room by the moderator");
+        history.push("/chat/room");
+      }
+
       // Remove Participant from Redux
-      dispatch(removeChatParticipant(newParticipant.uid));
+      dispatch(removeChatParticipant(removeParticipant.uid));
     } 
   }, [removeParticipant])
 
@@ -433,36 +455,13 @@ const ChatRoom = () => {
   return (
     <Layout>
       <RoomContainer>
-        <RoomSidePanel>
-          <PanelHeader>
-            <PanelHeaderButton onClick={() => history.push('/chat/room')}>
-              <MdKeyboardBackspace />
-            </PanelHeaderButton>
-            <span>{roomPw.length > 0 ? 'PRIVATE' : 'PUBLIC'}</span>
-            <PanelTitle>
-              {roomTitle}
-            </PanelTitle>
-            <PanelSubtitle>
-              {roomDesc}
-            </PanelSubtitle>
-          </PanelHeader>
-          <ParticipantListContainer>
-            <PanelTitle small>
-              Participants ({participants.length})
-            </PanelTitle>
-            <ParticipantList>
-              {
-                participants.map(p => {
-                  return (
-                    <ParticipantListItem key={p.uid}>
-                      {p.nickname}
-                    </ParticipantListItem>
-                  )
-                })
-              }
-            </ParticipantList>
-          </ParticipantListContainer>
-        </RoomSidePanel>
+        <ChatRoomPanel
+          roomTitle={roomTitle}
+          roomDesc={roomDesc}
+          roomPw={roomPw}
+          roomId={roomId}
+          participants={participants}
+        />
         <ChatContainer>
           <MessageList ref={messageListEndRef}>
             {
@@ -495,7 +494,6 @@ const ChatRoom = () => {
             <EmojiSelectModal
               targetMessageUid={targetMessageUid}
               onSelectEmoji={onSelectEmoji}
-              onClose={onCloseEmojiSelectModal}
               emojiList={availableEmojis}
             />
           )
@@ -527,75 +525,6 @@ const RoomContainer = styled(Container)`
   padding: 0;
   display: grid;
   grid-template-columns: 30% 70%;
-`
-
-const RoomSidePanel = styled.div`
-  width: 100%;
-  height: 100%;
-  background-color: #1d3557;
-  border-radius: 4px 0 0 4px;
-  display: grid;
-  grid-template-rows: 30% 70%;
-  padding: 20px;
-`
-
-const PanelHeader = styled.div`
-  border-bottom: 1px solid white;
-  & > span {
-    background-color: white;
-    font-size: 10px;
-    font-weight: bold;
-    padding: 3px 6px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-  }
-`
-
-const PanelHeaderButton = styled.button`
-  border: none;
-  padding: 8px 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  cursor: pointer;
-`
-
-const PanelTitle = styled.p`
-  margin: 6px 0;
-  color: white;
-  font-size: ${props => props.small ? '14px' : '24px'};
-  font-weight: bold;
-`
-
-const PanelSubtitle = styled.p`
-  margin: 0;
-  color: white;
-  font-size: 12px;
-`
-
-const ParticipantListContainer = styled.div`
-  display: grid;
-  grid-template-rows: 25px auto;
-  padding-top: 16px;
-`
-
-const ParticipantList = styled.div`
-  min-height: 0;
-  max-height: 100%;
-  overflow: scroll;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-`
-
-const ParticipantListItem = styled.p`
-  color: #1d3557;
-  padding: 6px;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 10px;
 `
 
 const ChatContainer = styled.div`
