@@ -14,22 +14,21 @@ import {
 	Container
 } from '../../styles/Chat';
 import '../../styles/transitions.css';
+import { setChatRoomModalStatus } from '../../reducers/modal';
 import styled from 'styled-components';
 
 const ChatList = () => {
 	const { push } = useHistory();
 	const dispatch = useDispatch();
-	const userProfile = useSelector(state => state.user.userProfile);
-	const rooms = useSelector(state => state.chat.roomList);
 
 	const [newRoom, setNewRoom] = useState(null);
 	const [removeRoom, setRemoveRoom] = useState(null);
 
-	const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+	const userProfile = useSelector(state => state.user.userProfile);
+	const rooms = useSelector(state => state.chat.roomList);
+	const isChatRoomModalOpen = useSelector(state => state.modal.isChatRoomModalOpen);
 
 	console.log(rooms);
-
-	const onCloseRoomModal = () => setIsRoomModalOpen(prev => !prev);
 
 	// Subscriptions on Firestore
 	useEffect(() => {
@@ -96,16 +95,15 @@ const ChatList = () => {
 
 	useEffect(() => {
     firebaseApp.auth().onAuthStateChanged(user => {
-      const uid = (firebaseApp.auth().currentUser || {}).uid;
+      const authUserUid = (firebaseApp.auth().currentUser || {}).uid;
+			const userUid = (userProfile?.uid || null);
 
-			console.log(uid, userProfile)
-
-      if (!uid || userProfile === null) {
+      if (!authUserUid || !userUid) {
 				alert('Please login to access the Chatrooms.')
         push('/users/login');
       }
     });
-  }, [userProfile, push]);
+  }, [userProfile.uid]);
 
 	return (
 		<Layout>
@@ -114,7 +112,7 @@ const ChatList = () => {
 					<NavTitle>
 						Live Chat Rooms
 					</NavTitle>
-					<NavButton onClick={() => setIsRoomModalOpen(true)}>Create New Room</NavButton>
+					<NavButton onClick={() => dispatch(setChatRoomModalStatus(true))}>Create New Room</NavButton>
 					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
 				<List>
@@ -143,7 +141,7 @@ const ChatList = () => {
 					</TransitionGroup>
 				</List>
 			</ChatListContainer>
-			<RoomModal isOpened={isRoomModalOpen} onClose={onCloseRoomModal}/>
+			<RoomModal isOpened={isChatRoomModalOpen}/>
 		</Layout>
 	)
 }

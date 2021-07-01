@@ -10,32 +10,17 @@ import {
   addChatParticipant,
   removeChatParticipant,
   setChatRoomTitle,
-  setChatRoomDesc
+  setChatRoomDesc,
+  setChatRoomPw
 } from '../../reducers/chat';
+import { setEmojiSelectModalStatus } from '../../reducers/modal'
 import styled from 'styled-components';
 
 import EmojiSelectModal from '../../components/Modal/EmojiSelectModal';
 import Message from './Message';
 import MessageInput from './MessageInput'
-
-// Test Emoji List
-const testEmojiList = [
-  {
-    uid: 'ee-mm-oo-jj-ii',
-    label: 'async-parrot',
-    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1597609836/10034/async_parrot.gif?1597609836' 
-  },
-  {
-    uid: 'ee-mm-oo-jj-ii-2',
-    label: 'ahhhhh',
-    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1558099591/5711/ahhhhhhhhh.gif?1558099591' 
-  },
-  {
-    uid: 'ee-mm-oo-jj-ii-3',
-    label: 'banana-dance',
-    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1450694616/220/bananadance.gif?1450694616' 
-  }
-]
+import MessageDeleteModal from '../../components/Modal/MessageDeleteModal';
+import MessageEditModal from '../../components/Modal/MessageEditModal';
 
 const ChatRoom = () => {
   const { roomId } = useParams();
@@ -45,12 +30,11 @@ const ChatRoom = () => {
 
   const [chats, setChats] = useState([]);
   const [chatEmojis, setChatEmojis] = useState({}); // Operate as hash table for easy lookup
-
-  const [targetMessageUid, setTargetMessageUid] = useState('');
-  const [isEmojiSelectModalOpen, setIsEmojiSelectModalOpen] = useState(false);
+  const [availableEmojis, setAvailableEmojis] = useState([]);
 
   const [newMessage, setNewMessage] = useState(null);
   const [modifyMessage, setModifyMessage] = useState(null);
+  const [removeMessage, setRemoveMessage] = useState(null);
 
   const [newParticipant, setNewParticipant] = useState(null);
   const [removeParticipant, setRemoveParticipant] = useState(null);
@@ -58,15 +42,26 @@ const ChatRoom = () => {
   const [newEmoji, setnewEmoji] = useState(null);
   const [modifyEmoji, setModifyEmoji] = useState(null);
 
+  // User Redux State
   const userProfile = useSelector(state => state.user.userProfile);
-  const roomTitle = useSelector(state => state.chat.currentChat.roomTitle)
-  const roomDesc = useSelector(state => state.chat.currentChat.roomDesc)
-  const participants = useSelector(state => state.chat.currentChat.participants)
+
+  // Chat Redux State
+  const roomTitle = useSelector(state => state.chat.currentChat.roomTitle);
+  const roomDesc = useSelector(state => state.chat.currentChat.roomDesc);
+  const roomPw = useSelector(state => state.chat.currentChat.roomPw);
+  const participants = useSelector(state => state.chat.currentChat.participants);
+
+  // Modal Redux State
+  const isEmojiSelectModalOpen = useSelector(state => state.modal.isEmojiSelectModalOpen);
+  const isMessageEditModalOpen = useSelector(state => state.modal.isMessageEditModalOpen);
+  const isMessageDeleteModalOpen = useSelector(state => state.modal.isMessageDeleteModalOpen);
+  const targetMessageUid = useSelector(state => state.modal.targetMessageUid);
+  const targetMessageContent = useSelector(state => state.modal.targetMessageContent);
 
   const { uid: userUid, nickname } = userProfile;
 
   // Emoji Select Box Logic
-  const onCloseEmojiSelectModal = () => setIsEmojiSelectModalOpen(false);
+  const onCloseEmojiSelectModal = () => dispatch(setEmojiSelectModalStatus(false));
 
   const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
     console.log(emojiUid, messageUid, isRemove);
@@ -133,12 +128,7 @@ const ChatRoom = () => {
         userNickname: nickname,
         content: message,
         uid: messageUid,
-        created: firebase.firestore.Timestamp.now().seconds,
-        // Emoji Section
-        likes: [],
-        checks: [],
-        parrots: [],
-        frogs: []
+        created: firebase.firestore.Timestamp.now().seconds
       }
 
       try {
@@ -171,6 +161,7 @@ const ChatRoom = () => {
         
         dispatch(setChatRoomTitle(roomDoc.data().title));
         dispatch(setChatRoomDesc(roomDoc.data().description));
+        dispatch(setChatRoomPw(roomDoc.data().password));
 
       } catch (e) {
         console.log(e);
@@ -189,10 +180,27 @@ const ChatRoom = () => {
             entered: firebase.firestore.Timestamp.now().seconds
           })
       } catch (e) {
-        console.log(e)
+        console.log(e);
       }
     }
 
+    const getEmojis = async () => {
+      try {
+        const emojiRef = db.collection("emojis")
+        const querySnapshot = await emojiRef.get();
+        const tempEmojis = []
+        querySnapshot.forEach((doc) => {
+          tempEmojis.push(doc.data())
+        })
+
+        setAvailableEmojis(tempEmojis);
+
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    getEmojis();
     getRoomInfo();
     addUserToRoom();
 
@@ -227,7 +235,8 @@ const ChatRoom = () => {
           setModifyMessage(data);  
         }
         if (change.type === "removed") {
-          console.log("remove message: ", change.doc.data());
+          const data = change.doc.data();
+          setRemoveMessage(data);
         }
       });
     });
@@ -261,7 +270,7 @@ const ChatRoom = () => {
 
   useEffect(() => {
     if (newMessage) {
-      console.log("Add Message")
+      console.log("Add Message To State")
       const cp = [...chats]
       cp.push(newMessage)
       setChats(cp)
@@ -297,13 +306,21 @@ const ChatRoom = () => {
 
   useEffect(() => {
     if (modifyMessage) {
-      console.log("Modify Message")
+      console.log("Modify Message From State")
       const cp = [...chats]
       const index = cp.findIndex(el => el.uid === modifyMessage.uid)
       cp[index] = modifyMessage 
       setChats(cp)
     }
   }, [modifyMessage])
+
+  useEffect(() => {
+    if (removeMessage) {
+      console.log("Remove Message From State")
+      const cp = [...chats].filter(el => el.uid !== removeMessage.uid)
+      setChats(cp)
+    }
+  }, [removeMessage])
 
   useEffect(() => {
     if (newEmoji) {
@@ -421,6 +438,7 @@ const ChatRoom = () => {
             <PanelHeaderButton onClick={() => history.push('/chat/room')}>
               <MdKeyboardBackspace />
             </PanelHeaderButton>
+            <span>{roomPw.length > 0 ? 'PRIVATE' : 'PUBLIC'}</span>
             <PanelTitle>
               {roomTitle}
             </PanelTitle>
@@ -455,13 +473,14 @@ const ChatRoom = () => {
                     messageUid={messageUid}
                     onSelectEmoji={onSelectEmoji}
                     userData={{ userUid, userNickname }}
-                    messageData={{ messageUserUid, created, content }}
+                    messageData={{
+                      messageUserUid,
+                      created,
+                      content
+                    }}
                     emojiData={{
                       emojis: (chatEmojis[messageUid] || {}),
-                      testEmojiList,
-                      isEmojiSelectModalOpen,
-                      setIsEmojiSelectModalOpen,
-                      setTargetMessageUid
+                      availableEmojis
                     }}
                   />
                 )
@@ -477,7 +496,24 @@ const ChatRoom = () => {
               targetMessageUid={targetMessageUid}
               onSelectEmoji={onSelectEmoji}
               onClose={onCloseEmojiSelectModal}
-              emojiList={testEmojiList}
+              emojiList={availableEmojis}
+            />
+          )
+        }
+        {/* MESSAGE EDIT MODDAL */}
+        {
+          isMessageEditModalOpen && (
+            <MessageEditModal
+              targetMessageUid={targetMessageUid}
+              targetMessageContent={targetMessageContent}
+            />
+          )
+        }
+        {/* MESSAGE DELETE MODDAL */}
+        {
+          isMessageDeleteModalOpen && (
+            <MessageDeleteModal
+              targetMessageUid={targetMessageUid}
             />
           )
         }
@@ -505,6 +541,14 @@ const RoomSidePanel = styled.div`
 
 const PanelHeader = styled.div`
   border-bottom: 1px solid white;
+  & > span {
+    background-color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 3px 6px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
 `
 
 const PanelHeaderButton = styled.button`
@@ -519,11 +563,10 @@ const PanelHeaderButton = styled.button`
 `
 
 const PanelTitle = styled.p`
-  margin: 0;
+  margin: 6px 0;
   color: white;
   font-size: ${props => props.small ? '14px' : '24px'};
   font-weight: bold;
-  margin-bottom: 6px;
 `
 
 const PanelSubtitle = styled.p`

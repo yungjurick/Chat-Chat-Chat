@@ -4,6 +4,7 @@ export const SET_ROOMS = 'SET_ROOMS'
 export const SET_CHAT_ROOM_ID = 'SET_CHAT_ROOM_ID'
 export const SET_CHAT_ROOM_TITLE = 'SET_CHAT_ROOM_TITLE'
 export const SET_CHAT_ROOM_DESC = 'SET_CHAT_ROOM_DESC'
+export const SET_CHAT_ROOM_PW = 'SET_CHAT_ROOM_PW'
 export const ADD_CHAT_PARTICIPANT = 'ADD_CHAT_PARTICIPANT'
 export const REMOVE_CHAT_PARTICIPANT = 'REMOVE_CHAT_PARTICIPANT'
 export const RESET_CURRENT_CHAT = 'RESET_CURRENT_CHAT'
@@ -26,6 +27,11 @@ export const setChatRoomTitle = (title) => ({
 export const setChatRoomDesc = (desc) => ({
   type: SET_CHAT_ROOM_DESC,
   payload: desc,
+})
+
+export const setChatRoomPw = (pw) => ({
+  type: SET_CHAT_ROOM_PW,
+  payload: pw,
 })
 
 export const addChatParticipant = (uid) => ({
@@ -91,6 +97,16 @@ const chat = (state = initialState, action) => {
       }
     }
 
+    case SET_CHAT_ROOM_PW: {
+      return {
+        ...state,
+        currentChat: {
+          ...state.currentChat,
+          roomPw: action.payload
+        }
+      }
+    }
+
     case ADD_CHAT_PARTICIPANT: {
       return {
         ...state,
@@ -129,6 +145,7 @@ const chat = (state = initialState, action) => {
             roomId: '',
             roomTitle: '',
             roomDesc: '',
+            roomPw: '',
             participants: []
           }
         }
@@ -139,6 +156,7 @@ const chat = (state = initialState, action) => {
             roomId: '',
             roomTitle: '',
             roomDesc: '',
+            roomPw: '',
             participants: []
           }
         }

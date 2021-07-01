@@ -19,10 +19,4 @@ const MessageContentParag = styled.p`
   margin: 10px 0 0 0;
 `
 
-const areEqual = (prevProps, nextProps) => {
-  return (
-    prevProps.content === nextProps.content
-  )
-}
-
-export default React.memo(MessageContent, areEqual)
+export default MessageContent

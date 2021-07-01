@@ -14,7 +14,10 @@ export const setUserProfile = (userProfile) => ({
 
 const initialState = {
   jwtToken: null,
-  userProfile: null,
+  userProfile: {
+    uid: '',
+    nickname: ''
+  },
   message: "",
 }
 

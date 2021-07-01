@@ -5,6 +5,14 @@ import {
   MdInsertEmoticon,
   MdDeleteForever
 } from "react-icons/md";
+import {
+  setEmojiSelectModalStatus,
+  setMessageEditModalStatus,
+  setMessageDeleteModalStatus,
+  setTargetMessageUid,
+  setTargetMessageContent
+} from '../../reducers/modal'
+import { useSelector, useDispatch } from 'react-redux';
 
 import MessageContent from './MessageContent';
 
@@ -22,17 +30,22 @@ const Message = ({
   messageData,
   emojiData
 }) => {
+  const dispatch = useDispatch();
+
   const { userUid, userNickname } = userData;
-  const { messageUserUid, created, content } = messageData;
+  const {
+    messageUserUid,
+    created,
+    content
+  } = messageData;
   const {
     emojis,
-    testEmojiList,
-    isEmojiSelectModalOpen,
-    setIsEmojiSelectModalOpen,
-    setTargetMessageUid
+    availableEmojis
   } = emojiData;
 
+  // States
   const [hoveredMessageUid, setHoveredMessageUid] = useState('');
+  const isEmojiSelectModalOpen = useSelector(state => state.modal.isEmojiSelectModalOpen);
 
   const isUser = userUid === messageUserUid;
 
@@ -47,9 +60,22 @@ const Message = ({
     }
   };
 
-  const onClickEmoticonIcon = () => {
-    setTargetMessageUid(messageUid);
-    setIsEmojiSelectModalOpen(true)
+  const onClickIcon = (type, messageUid, content = '') => {
+    dispatch(setTargetMessageUid(messageUid));
+    switch (type) {
+      case 'emoji':
+        dispatch(setEmojiSelectModalStatus(true));
+        return;
+      case 'edit':
+        dispatch(setTargetMessageContent(content));
+        dispatch(setMessageEditModalStatus(true));
+        return;
+      case 'delete':
+        dispatch(setMessageDeleteModalStatus(true));
+        return;
+      default:
+        return;
+    }
   }
 
   console.log("Message");
@@ -72,9 +98,9 @@ const Message = ({
           <MessageEmojiContainer>
             {
               Object.keys(emojis).map(emojiUid => {
-                const emojiListIndex = testEmojiList.findIndex(obj => obj.uid === emojiUid)
+                const emojiListIndex = availableEmojis.findIndex(obj => obj.uid === emojiUid)
                 const { clickedUserUids } = emojis[emojiUid];
-                const { imageUrl } = testEmojiList[emojiListIndex];
+                const { imageUrl } = availableEmojis[emojiListIndex];
                 const hasClicked = clickedUserUids.findIndex(uid => uid === userUid) >= 0;
                 return (
                   <MessageEmojiWrapper
@@ -94,16 +120,16 @@ const Message = ({
       {
         hoveredMessageUid === messageUid && (
           <MessageUtilContainer>
-            <MessageUtilIconWrapper onClick={() => onClickEmoticonIcon()}>
+            <MessageUtilIconWrapper onClick={() => onClickIcon('emoji', messageUid)}>
               <MdInsertEmoticon/>
             </MessageUtilIconWrapper>
             {
               isUser && (
                 <Fragment>
-                  <MessageUtilIconWrapper>
+                  <MessageUtilIconWrapper onClick={() => onClickIcon('edit', messageUid, content)}>
                     <MdModeEdit />
                   </MessageUtilIconWrapper>
-                  <MessageUtilIconWrapper>
+                  <MessageUtilIconWrapper onClick={() => onClickIcon('delete', messageUid)}>
                     <MdDeleteForever />
                   </MessageUtilIconWrapper>
                 </Fragment>
@@ -256,6 +282,7 @@ const areEqual = (prevProps, nextProps) => {
   }
 
   return (
+    prevProps.messageData.content === nextProps.messageData.content &&
     prevProps.messageUid === nextProps.messageUid &&
     hasEqualEmojis(prevProps.emojiData.emojis, nextProps.emojiData.emojis)
   )

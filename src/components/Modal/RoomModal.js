@@ -5,6 +5,7 @@ import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLoading } from '../../reducers/loading';
 import { uuid } from 'uuidv4';
+import { setChatRoomModalStatus } from '../../reducers/modal';
 
 import {
 	Header,
@@ -13,7 +14,7 @@ import {
 	FormButton
 } from '../../styles/Form'
 
-const RoomModal = ({ isOpened, onClose }) => {
+const RoomModal = ({ isOpened }) => {
   const history = useHistory();
   const dispatch = useDispatch();
 
@@ -87,15 +88,15 @@ const RoomModal = ({ isOpened, onClose }) => {
       description: ''
     })
 
-    onClose();
+    dispatch(setChatRoomModalStatus(false));
   }
 
   const { title, description, password } = roomObject;
   const { nickname, uid } = useSelector((state) => (state.user.userProfile || { nickname: '', uid: ''}));
 
 	return (
-    <ModalLayout isOpened={isOpened}>
-      <ModalContainer>
+    <RoomModalLayout isOpened={isOpened}>
+      <RoomModalContainer>
         <Header>Create a New Room</Header>
 
         <FormLabel>Room Title</FormLabel>
@@ -109,12 +110,12 @@ const RoomModal = ({ isOpened, onClose }) => {
 
         <FormButton onClick={() => onSubmit()}>Submit</FormButton>
         <FormButton secondary onClick={() => handleClose()}>Close</FormButton>
-      </ModalContainer>
-    </ModalLayout>
+      </RoomModalContainer>
+    </RoomModalLayout>
   )
 }
 
-const ModalLayout = styled.div`
+const RoomModalLayout = styled.div`
   position: fixed;
   height: 100vh;
   width: 100vw;
@@ -126,7 +127,7 @@ const ModalLayout = styled.div`
   display: ${props => props.isOpened ? 'flex' : 'none'};
 `
 
-const ModalContainer = styled.div`
+const RoomModalContainer = styled.div`
   width: 400px;
   height: auto;
   background-color: white;

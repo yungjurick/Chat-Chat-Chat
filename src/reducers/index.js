@@ -2,6 +2,7 @@ import { combineReducers } from 'redux';
 import user from './user';
 import loading from './loading';
 import chat from './chat';
+import modal from './modal';
 
 export const USER_LOGOUT = "USER_LOGOUT"
 export const userLogOut = () => ({
@@ -11,7 +12,8 @@ export const userLogOut = () => ({
 const appReducer = combineReducers({
   user,
   loading,
-  chat
+  chat,
+  modal
 })
 
 const rootReducer = (state, action) => {
