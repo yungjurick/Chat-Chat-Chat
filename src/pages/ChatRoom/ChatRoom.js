@@ -1,15 +1,10 @@
-import React, { useState, useEffect, useRef, Fragment } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db, firebase } from '../../firebase'
 import { useParams, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { uuid } from 'uuidv4';
 import { Layout, Container } from '../../styles/Chat';
-import {
-  MdKeyboardBackspace,
-  MdModeEdit,
-  MdInsertEmoticon,
-  MdDeleteForever
-} from "react-icons/md";
+import { MdKeyboardBackspace } from "react-icons/md";
 import {
   setChatRoomId,
   addChatParticipant,
@@ -18,7 +13,10 @@ import {
   setChatRoomDesc
 } from '../../reducers/chat';
 import styled from 'styled-components';
+
 import EmojiSelectModal from '../../components/Modal/EmojiSelectModal';
+import Message from './Message';
+import MessageInput from './MessageInput'
 
 // Test Emoji List
 const testEmojiList = [
@@ -48,8 +46,7 @@ const ChatRoom = () => {
   const [chats, setChats] = useState([]);
   const [chatEmojis, setChatEmojis] = useState({}); // Operate as hash table for easy lookup
 
-  const [message, setMessage] = useState('');
-  const [hoveredMessageUid, setHoveredMessageUid] = useState('');
+  const [targetMessageUid, setTargetMessageUid] = useState('');
   const [isEmojiSelectModalOpen, setIsEmojiSelectModalOpen] = useState(false);
 
   const [newMessage, setNewMessage] = useState(null);
@@ -60,7 +57,6 @@ const ChatRoom = () => {
 
   const [newEmoji, setnewEmoji] = useState(null);
   const [modifyEmoji, setModifyEmoji] = useState(null);
-  const [removeEmoji, setRemoveEmoji] = useState(null);
 
   const userProfile = useSelector(state => state.user.userProfile);
   const roomTitle = useSelector(state => state.chat.currentChat.roomTitle)
@@ -69,12 +65,12 @@ const ChatRoom = () => {
 
   const { uid: userUid, nickname } = userProfile;
 
-  const onChangeMessage = e => setMessage(e.target.value);
-
   // Emoji Select Box Logic
   const onCloseEmojiSelectModal = () => setIsEmojiSelectModalOpen(false);
 
   const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
+    console.log(emojiUid, messageUid, isRemove);
+
     const emojiRef = db
       .collection('chatrooms')
       .doc('room_' + roomId)
@@ -84,8 +80,6 @@ const ChatRoom = () => {
 
     // Variable to check if it has updated
     let notUpdated = false;
-    
-    console.log(emojiUid, messageUid, isRemove);
 
     try {
       // First, try updating the clickedUserUids Array if the doc already exists
@@ -130,28 +124,8 @@ const ChatRoom = () => {
     }
   }
 
-  // Hover Events
-  const onMouseEnterHandler = messageId => {
-    setHoveredMessageUid(messageId);
-  };
-  const onMouseLeaveHandler = () => {
-    if (!isEmojiSelectModalOpen) {
-      setHoveredMessageUid('');
-    }
-  };
-
-  // KeyPress Event on Input
-  const handleInputKeyPress = e => {
-    if (e.key === 'Enter') {
-      if (!e.shiftKey) {
-        e.preventDefault();
-        onSubmitMessage();
-      }
-    }
-  }
-
   // Submit Event for Message Input
-  const onSubmitMessage = async () => {
+  const onSubmitMessage = async (message) => {
     if (message.length > 0) {
       const messageUid = uuid();
       const messagePayload = {
@@ -167,9 +141,6 @@ const ChatRoom = () => {
         frogs: []
       }
 
-      // Empty Message State
-      setMessage('');
-
       try {
         // Add message to Firestore
         const chatRef = db.collection('chatrooms').doc('room_' + roomId).collection('messages')
@@ -183,14 +154,6 @@ const ChatRoom = () => {
   }
 
   // Utils
-
-  const convertTimestampToDate = timestamp => {
-    const date = new Date(timestamp*1000).toDateString().split(' ');
-    const time = new Date(timestamp*1000).toLocaleTimeString().split(':');
-
-    return `${time[0]}:${time[1]}, ${date[2]} ${date[1]}`
-  }
-
   const removeUserFromFirestore = (roomId, uid) => {
     console.log("Remove Participant")
     db.collection("chatrooms").doc("room_" + roomId).collection('participants').doc(uid).delete();
@@ -373,6 +336,10 @@ const ChatRoom = () => {
         
         // Delete emoji from state
         delete ce[messageUid][uid];
+
+        if (Object.keys(ce[messageUid]).length === 0) {
+          delete ce[messageUid];
+        }
       } else {
         // Update the clicked user uids array
         ce[messageUid] = {
@@ -481,89 +448,33 @@ const ChatRoom = () => {
         <ChatContainer>
           <MessageList ref={messageListEndRef}>
             {
-              chats.map(({ uid: messageUid, created, content, userNickname, userUid: messageUserUid, ...emojis }) => {
-                const isUser = userUid === messageUserUid
-                const isHovered = hoveredMessageUid === messageUid
+              chats.map(({ uid: messageUid, created, content, userNickname, userUid: messageUserUid }) => {
                 return (
-                  <MessageRow
+                  <Message
                     key={messageUid}
-                    onMouseEnter={() => onMouseEnterHandler(messageUid)}
-                    onMouseLeave={() => onMouseLeaveHandler()}
-                    isHovered={isHovered}
-                  >
-                    <MessageHeader isUser={isUser}>
-                      <MessageTitle>{userNickname}</MessageTitle>
-                      <MessageSubtitle>{convertTimestampToDate(created)}</MessageSubtitle>
-                    </MessageHeader>
-                    <MessageContentWrapper isUser={isUser}>
-                      <MessageContent isUser={isUser}>
-                        {content}
-                      </MessageContent>
-                    </MessageContentWrapper>
-                    {
-                      chatEmojis.hasOwnProperty(messageUid) && (
-                        <MessageEmojiContainer>
-                          {
-                            Object.keys(chatEmojis[messageUid]).map(emojiUid => {
-                              const emojiListIndex = testEmojiList.findIndex(obj => obj.uid === emojiUid)
-                              const { clickedUserUids } = chatEmojis[messageUid][emojiUid];
-                              const { imageUrl } = testEmojiList[emojiListIndex];
-                              const hasClicked = clickedUserUids.findIndex(uid => uid === userUid) >= 0;
-                              return (
-                                <MessageEmojiWrapper
-                                  key={emojiUid}
-                                  hasClicked={hasClicked}
-                                  onClick={() => onSelectEmoji(emojiUid, messageUid, hasClicked)}
-                                >
-                                  <img src={imageUrl} alt="emoji" />
-                                  <span>{clickedUserUids.length}</span>
-                                </MessageEmojiWrapper>
-                              )
-                            })
-                          }
-                        </MessageEmojiContainer>
-                      )
-                    }
-                    {
-                      hoveredMessageUid === messageUid && (
-                        <MessageUtilContainer>
-                          <MessageUtilIconWrapper onClick={() => setIsEmojiSelectModalOpen(true)}>
-                            <MdInsertEmoticon/>
-                          </MessageUtilIconWrapper>
-                          {
-                            isUser && (
-                              <Fragment>
-                                <MessageUtilIconWrapper>
-                                  <MdModeEdit />
-                                </MessageUtilIconWrapper>
-                                <MessageUtilIconWrapper>
-                                  <MdDeleteForever />
-                                </MessageUtilIconWrapper>
-                              </Fragment>
-                            )
-                          }
-                        </MessageUtilContainer>
-                      )
-                    }
-                  </MessageRow>
+                    messageUid={messageUid}
+                    onSelectEmoji={onSelectEmoji}
+                    userData={{ userUid, userNickname }}
+                    messageData={{ messageUserUid, created, content }}
+                    emojiData={{
+                      emojis: (chatEmojis[messageUid] || {}),
+                      testEmojiList,
+                      isEmojiSelectModalOpen,
+                      setIsEmojiSelectModalOpen,
+                      setTargetMessageUid
+                    }}
+                  />
                 )
               })
             }
           </MessageList>
-          <MessageInputContainer>
-            <MessageTextarea type="text" value={message} onChange={e => onChangeMessage(e)} onKeyPress={e => handleInputKeyPress(e)}/>
-          </MessageInputContainer>
-          <MessageButtonContainer>
-              <MessageButton onClick={() => onSubmitMessage()}>
-                SEND
-              </MessageButton>
-            </MessageButtonContainer>
+          <MessageInput onSubmitMessage={onSubmitMessage}/>
         </ChatContainer>
         {/* EMOJI SELECT MODAL */}
         {
           isEmojiSelectModalOpen && (
             <EmojiSelectModal
-              curMessageUid={hoveredMessageUid}
+              targetMessageUid={targetMessageUid}
               onSelectEmoji={onSelectEmoji}
               onClose={onCloseEmojiSelectModal}
               emojiList={testEmojiList}
@@ -665,157 +576,6 @@ const MessageList = styled.div`
     display: none;
   }
   padding-bottom: 10px;
-`
-
-const MessageRow = styled.div`
-  position: relative;
-  padding: 12px 20px;
-  width: 100%;
-  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-  & + & {
-    /* padding: 12px 0; */
-  }
-  background-color: ${props => props.isHovered ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
-`
-
-const MessageHeader = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-`
-
-const MessageTitle = styled.p`
-  margin: 0;
-  font-weight: bold;
-  font-size: 14px;
-`
-
-const MessageSubtitle = styled.span`
-  font-size: 10px;
-  margin: 0 6px;
-`
-
-const MessageContentWrapper = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-`
-
-const MessageContent = styled.p`
-  background-color: ${props => props.isUser ? '#78C1FF' : 'lightgray'};
-  border-radius: 10px;
-  padding: 10px;
-  display: inline-block;
-  max-width: 50%;
-  word-wrap: break-word;
-  margin: 10px 0 0 0;
-`
-
-const MessageUtilContainer = styled.div`
-  border: 1px solid lightgray;
-  width: auto;
-  height: auto;
-  position: absolute;
-  top: 12px;
-  right: 20px;
-  border-radius: 4px;
-  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-sizing: border-box;
-  background-color: white;
-  padding: 4px;
-`
-const MessageUtilIconWrapper = styled.div`
-  padding: 6px;
-  border-radius: 4px;
-  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  &:hover {
-    background-color: lightgray;
-  }
-  & + & {
-    margin-left: 6px;
-  }
-`
-
-const MessageEmojiContainer = styled.div`
-  padding-top: 10px;
-`
-
-const MessageEmojiWrapper = styled.div`
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  height: 40px;
-  width: 50px;
-  border-radius: 10px;
-  padding: 4px;
-  cursor: pointer;
-  border: ${props => props.hasClicked ? '1.5px solid #1D3458' : '1.5px solid lightgray'};
-  color: ${props => props.hasClicked ? 'white' : 'black'};
-  background-color: ${props => props.hasClicked ? '#1D3458' : 'transparent'};
-
-  & > img {
-    height: 19px;
-    width: 19px;
-  }
-  & > span {
-    font-weight: 600;
-    font-size: 12px;
-    margin-left: 4px;
-  }
-  &:hover {
-    color: white;
-    background-color: #1D3458;
-  }
-  & + & {
-    margin-left: 10px;
-  }
-`
-
-const MessageInputContainer = styled.div`
-  height: 100%;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: 12px 20px 0 20px;
-`
-
-const MessageTextarea = styled.textarea`
-  width: 100%;
-  outline: none;
-  border-radius: 4px;
-  border: 1.5px solid #E6E9EF;
-  padding: 12px;
-  resize: none;
-  font-family: Arial, Helvetica, sans-serif;
-`
-const MessageButtonContainer = styled.div`
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 8px 20px;
-  box-sizing: border-box;
-`
-
-const MessageButton = styled.button`
-  border: none;
-  border-radius: 4px;
-  background-color: #78C1FF;
-  color: white;
-  margin-left: 16px;
-  padding: 10px 25px;
-  margin-left: auto;
-  font-weight: bold;
-  cursor: pointer;
 `
 
 export default ChatRoom

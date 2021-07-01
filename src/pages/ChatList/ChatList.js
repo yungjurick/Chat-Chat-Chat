@@ -124,7 +124,7 @@ const ChatList = () => {
 							return (
 								<CSSTransition
 									key={id}
-									timeout={500}
+									timeout={1000}
 									classNames="item"
 								>
 									<ListItem onClick={() => onClickRoom(password, id)}>

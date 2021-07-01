@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { MdClose } from "react-icons/md";
 
-const EmojiSelectModal = ({ onClose, emojiList, onSelectEmoji, curMessageUid }) => {
+const EmojiSelectModal = ({ onClose, emojiList, onSelectEmoji, targetMessageUid }) => {
   
   const handleOnSelect = (emojiUid, messageUid) => {
     onSelectEmoji(emojiUid, messageUid);
@@ -22,7 +22,7 @@ const EmojiSelectModal = ({ onClose, emojiList, onSelectEmoji, curMessageUid }) 
               return (
                 <EmojiGridItem
                   key={emoji.uid}
-                  onClick={() => handleOnSelect(emoji.uid, curMessageUid)}
+                  onClick={() => handleOnSelect(emoji.uid, targetMessageUid)}
                 >
                   <EmojiImage src={emoji.imageUrl}/>
                 </EmojiGridItem>
