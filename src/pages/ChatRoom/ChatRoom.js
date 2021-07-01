@@ -1,16 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { db, firebase } from '../../firebase'
 import { useParams, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { uuid } from 'uuidv4';
 import { Layout, Container } from '../../styles/Chat';
-import { MdKeyboardBackspace } from "react-icons/md";
+import {
+  MdKeyboardBackspace,
+  MdModeEdit,
+  MdInsertEmoticon,
+  MdDeleteForever
+} from "react-icons/md";
 import {
   setChatRoomId,
   addChatParticipant,
   removeChatParticipant,
+  setChatRoomTitle,
+  setChatRoomDesc
 } from '../../reducers/chat';
 import styled from 'styled-components';
+import EmojiSelectModal from '../../components/Modal/EmojiSelectModal';
+
+// Test Emoji List
+const testEmojiList = [
+  {
+    uid: 'ee-mm-oo-jj-ii',
+    label: 'async-parrot',
+    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1597609836/10034/async_parrot.gif?1597609836' 
+  },
+  {
+    uid: 'ee-mm-oo-jj-ii-2',
+    label: 'ahhhhh',
+    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1558099591/5711/ahhhhhhhhh.gif?1558099591' 
+  },
+  {
+    uid: 'ee-mm-oo-jj-ii-3',
+    label: 'banana-dance',
+    imageUrl: 'https://emojis.slackmojis.com/emojis/images/1450694616/220/bananadance.gif?1450694616' 
+  }
+]
 
 const ChatRoom = () => {
   const { roomId } = useParams();
@@ -18,12 +45,12 @@ const ChatRoom = () => {
   const dispatch = useDispatch();
   const messageListEndRef = useRef(null);
 
-  const [roomName, setRoomName] = useState('');
-  const [roomDesc, setRoomDesc] = useState('');
-
   const [chats, setChats] = useState([]);
+  const [chatEmojis, setChatEmojis] = useState({}); // Operate as hash table for easy lookup
+
   const [message, setMessage] = useState('');
-  const [participants, setParticipants] = useState([]);
+  const [hoveredMessageUid, setHoveredMessageUid] = useState('');
+  const [isEmojiSelectModalOpen, setIsEmojiSelectModalOpen] = useState(false);
 
   const [newMessage, setNewMessage] = useState(null);
   const [modifyMessage, setModifyMessage] = useState(null);
@@ -31,13 +58,99 @@ const ChatRoom = () => {
   const [newParticipant, setNewParticipant] = useState(null);
   const [removeParticipant, setRemoveParticipant] = useState(null);
 
+  const [newEmoji, setnewEmoji] = useState(null);
+  const [modifyEmoji, setModifyEmoji] = useState(null);
+  const [removeEmoji, setRemoveEmoji] = useState(null);
+
   const userProfile = useSelector(state => state.user.userProfile);
-  const participantCnt = useSelector(state => state.chat.currentChat.participants.length)
+  const roomTitle = useSelector(state => state.chat.currentChat.roomTitle)
+  const roomDesc = useSelector(state => state.chat.currentChat.roomDesc)
+  const participants = useSelector(state => state.chat.currentChat.participants)
 
   const { uid: userUid, nickname } = userProfile;
 
   const onChangeMessage = e => setMessage(e.target.value);
 
+  // Emoji Select Box Logic
+  const onCloseEmojiSelectModal = () => setIsEmojiSelectModalOpen(false);
+
+  const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
+    const emojiRef = db
+      .collection('chatrooms')
+      .doc('room_' + roomId)
+      .collection('messages')
+      .doc(messageUid)
+      .collection('emojis')
+
+    // Variable to check if it has updated
+    let notUpdated = false;
+    
+    console.log(emojiUid, messageUid, isRemove);
+
+    try {
+      // First, try updating the clickedUserUids Array if the doc already exists
+      // If it is for removing click, remove from array - else, try update
+
+      if (isRemove) {
+        // Deactivate Emoji - Remove user uid from array
+        console.log("Remove Emoji Click");
+        await emojiRef
+          .doc(emojiUid)
+          .update({
+            clickedUserUids: firebase.firestore.FieldValue.arrayRemove(userUid)
+          })
+      } else {
+        // Activate Emoji - Add user uid to array
+        console.log("Add Emoji Click");
+        await emojiRef
+          .doc(emojiUid)
+          .update({
+            clickedUserUids: firebase.firestore.FieldValue.arrayUnion(userUid)
+          })
+      }
+    } catch (e) {
+      // If it does not exist, create a new document
+      console.log("Error in Updating Emoji Click.", e)
+      notUpdated = true;
+    }
+
+    if (notUpdated) {
+      console.log("Creating New Emoji Doc in Message.")
+      try {
+        await emojiRef
+          .doc(emojiUid)
+          .set({
+            messageUid,
+            uid: emojiUid,
+            clickedUserUids: [userUid]
+          })
+      } catch (e) {
+        console.log(e)
+      }
+    }
+  }
+
+  // Hover Events
+  const onMouseEnterHandler = messageId => {
+    setHoveredMessageUid(messageId);
+  };
+  const onMouseLeaveHandler = () => {
+    if (!isEmojiSelectModalOpen) {
+      setHoveredMessageUid('');
+    }
+  };
+
+  // KeyPress Event on Input
+  const handleInputKeyPress = e => {
+    if (e.key === 'Enter') {
+      if (!e.shiftKey) {
+        e.preventDefault();
+        onSubmitMessage();
+      }
+    }
+  }
+
+  // Submit Event for Message Input
   const onSubmitMessage = async () => {
     if (message.length > 0) {
       const messageUid = uuid();
@@ -69,14 +182,7 @@ const ChatRoom = () => {
     }        
   }
 
-  const handleInputKeyPress = e => {
-    if (e.key === 'Enter') {
-      if (!e.shiftKey) {
-        e.preventDefault();
-        onSubmitMessage();
-      }
-    }
-  }
+  // Utils
 
   const convertTimestampToDate = timestamp => {
     const date = new Date(timestamp*1000).toDateString().split(' ');
@@ -100,8 +206,8 @@ const ChatRoom = () => {
 
         console.log(roomDoc.data());
         
-        setRoomName(roomDoc.data().title);
-        setRoomDesc(roomDoc.data().description);
+        dispatch(setChatRoomTitle(roomDoc.data().title));
+        dispatch(setChatRoomDesc(roomDoc.data().description));
 
       } catch (e) {
         console.log(e);
@@ -132,6 +238,7 @@ const ChatRoom = () => {
 
     return () => {
       removeUserFromFirestore(roomId, userUid);
+      dispatch(removeChatParticipant(userUid));
     }
   }, [])
 
@@ -195,6 +302,33 @@ const ChatRoom = () => {
       const cp = [...chats]
       cp.push(newMessage)
       setChats(cp)
+
+      // Attach Emoji OnSnapshot Change
+      const emojiRef = db
+        .collection('chatrooms')
+        .doc('room_' + roomId)
+        .collection('messages')
+        .doc(newMessage.id)
+        .collection('emojis')
+
+      emojiRef.onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          console.log("Emoji Snapshot Logged");
+          if (change.type === "added") {
+            const newEmoji = change.doc.data();
+            newEmoji.id = change.doc.id
+            setnewEmoji(newEmoji);
+          }
+          if (change.type === "modified") {
+            const data = change.doc.data();
+            data.id = change.doc.id
+            setModifyEmoji(data);  
+          }
+          if (change.type === "removed") {
+            console.log("remove message: ", change.doc.data());
+          }
+        });
+      });
     }
   }, [newMessage])
 
@@ -209,18 +343,62 @@ const ChatRoom = () => {
   }, [modifyMessage])
 
   useEffect(() => {
+    if (newEmoji) {
+      console.log("New Emoji", newEmoji)
+      const ce = {...chatEmojis}
+
+      ce[newEmoji.messageUid] = {
+        ...ce[newEmoji.messageUid],
+        [newEmoji.uid]: newEmoji
+      };
+      setChatEmojis(ce)
+    }
+  }, [newEmoji])
+
+  useEffect(() => {
+    if (modifyEmoji) {
+      console.log("Modify Emoji", modifyEmoji)
+      const ce = {...chatEmojis}
+      const { messageUid, clickedUserUids, uid } = modifyEmoji;
+
+      if (clickedUserUids.length === 0) {
+        // Fire event to firestore to delete emoji from message
+        db.collection('chatrooms')
+          .doc('room_' + roomId)
+          .collection('messages')
+          .doc(messageUid)
+          .collection('emojis')
+          .doc(uid)
+          .delete();
+        
+        // Delete emoji from state
+        delete ce[messageUid][uid];
+      } else {
+        // Update the clicked user uids array
+        ce[messageUid] = {
+          ...ce[messageUid],
+          [uid]: {
+            ...ce[messageUid][uid],
+            clickedUserUids
+          }
+        };
+      }
+
+      setChatEmojis(ce)
+    }
+  }, [modifyEmoji])
+
+  useEffect(() => {
     if (newParticipant) {
       // Check if user is already in the participants list
-      const alreadyInList = participants.findIndex(p => p === newParticipant.uid) > -1 ? true : false;
-      if (!alreadyInList) {
-        console.log("New User To Room:", newParticipant.nickname)
+      const alreadyInList = participants.findIndex(p => p.uid === newParticipant.uid) >= 0;
 
-        const newParticipantList = [...participants]
-        newParticipantList.push(newParticipant)
-        setParticipants(newParticipantList)
+      if (!alreadyInList) {
+        console.log("Prev Participants List:", participants);
+        console.log("New User To Room:", newParticipant);
 
         // Add Participant to Redux
-        dispatch(addChatParticipant(newParticipant.uid));
+        dispatch(addChatParticipant(newParticipant));
       }
     } 
   }, [newParticipant])
@@ -228,8 +406,6 @@ const ChatRoom = () => {
   useEffect(() => {
     if (removeParticipant) {
       console.log("Remove User From Room:", removeParticipant.nickname)
-      const newParticipantList = [...participants].filter(p => p.uid !== removeParticipant.uid);
-      setParticipants(newParticipantList);
 
       // Remove Participant from Redux
       dispatch(removeChatParticipant(newParticipant.uid));
@@ -279,7 +455,7 @@ const ChatRoom = () => {
               <MdKeyboardBackspace />
             </PanelHeaderButton>
             <PanelTitle>
-              {roomName}
+              {roomTitle}
             </PanelTitle>
             <PanelSubtitle>
               {roomDesc}
@@ -287,7 +463,7 @@ const ChatRoom = () => {
           </PanelHeader>
           <ParticipantListContainer>
             <PanelTitle small>
-              Participants ({participantCnt})
+              Participants ({participants.length})
             </PanelTitle>
             <ParticipantList>
               {
@@ -307,9 +483,14 @@ const ChatRoom = () => {
             {
               chats.map(({ uid: messageUid, created, content, userNickname, userUid: messageUserUid, ...emojis }) => {
                 const isUser = userUid === messageUserUid
-                
+                const isHovered = hoveredMessageUid === messageUid
                 return (
-                  <MessageRow key={messageUid}>
+                  <MessageRow
+                    key={messageUid}
+                    onMouseEnter={() => onMouseEnterHandler(messageUid)}
+                    onMouseLeave={() => onMouseLeaveHandler()}
+                    isHovered={isHovered}
+                  >
                     <MessageHeader isUser={isUser}>
                       <MessageTitle>{userNickname}</MessageTitle>
                       <MessageSubtitle>{convertTimestampToDate(created)}</MessageSubtitle>
@@ -319,9 +500,51 @@ const ChatRoom = () => {
                         {content}
                       </MessageContent>
                     </MessageContentWrapper>
-                    <MessageEmojiContainer>
-                      <MessageEmojiWrapper></MessageEmojiWrapper>
-                    </MessageEmojiContainer>
+                    {
+                      chatEmojis.hasOwnProperty(messageUid) && (
+                        <MessageEmojiContainer>
+                          {
+                            Object.keys(chatEmojis[messageUid]).map(emojiUid => {
+                              const emojiListIndex = testEmojiList.findIndex(obj => obj.uid === emojiUid)
+                              const { clickedUserUids } = chatEmojis[messageUid][emojiUid];
+                              const { imageUrl } = testEmojiList[emojiListIndex];
+                              const hasClicked = clickedUserUids.findIndex(uid => uid === userUid) >= 0;
+                              return (
+                                <MessageEmojiWrapper
+                                  key={emojiUid}
+                                  hasClicked={hasClicked}
+                                  onClick={() => onSelectEmoji(emojiUid, messageUid, hasClicked)}
+                                >
+                                  <img src={imageUrl} alt="emoji" />
+                                  <span>{clickedUserUids.length}</span>
+                                </MessageEmojiWrapper>
+                              )
+                            })
+                          }
+                        </MessageEmojiContainer>
+                      )
+                    }
+                    {
+                      hoveredMessageUid === messageUid && (
+                        <MessageUtilContainer>
+                          <MessageUtilIconWrapper onClick={() => setIsEmojiSelectModalOpen(true)}>
+                            <MdInsertEmoticon/>
+                          </MessageUtilIconWrapper>
+                          {
+                            isUser && (
+                              <Fragment>
+                                <MessageUtilIconWrapper>
+                                  <MdModeEdit />
+                                </MessageUtilIconWrapper>
+                                <MessageUtilIconWrapper>
+                                  <MdDeleteForever />
+                                </MessageUtilIconWrapper>
+                              </Fragment>
+                            )
+                          }
+                        </MessageUtilContainer>
+                      )
+                    }
                   </MessageRow>
                 )
               })
@@ -336,12 +559,24 @@ const ChatRoom = () => {
               </MessageButton>
             </MessageButtonContainer>
         </ChatContainer>
+        {/* EMOJI SELECT MODAL */}
+        {
+          isEmojiSelectModalOpen && (
+            <EmojiSelectModal
+              curMessageUid={hoveredMessageUid}
+              onSelectEmoji={onSelectEmoji}
+              onClose={onCloseEmojiSelectModal}
+              emojiList={testEmojiList}
+            />
+          )
+        }
       </RoomContainer>
     </Layout>
   )
 }
 
 const RoomContainer = styled(Container)`
+  position: relative;
   padding: 0;
   display: grid;
   grid-template-columns: 30% 70%;
@@ -415,9 +650,9 @@ const ChatContainer = styled.div`
   border-radius: 0 4px 4px 0;
   display: grid;
   grid-template-rows: 80% 13% 7%;
+  padding: 20px 0;
   min-height: 0;
   min-width: 0;
-  padding: 20px;
   box-sizing: border-box;
 `
 const MessageList = styled.div`
@@ -433,17 +668,20 @@ const MessageList = styled.div`
 `
 
 const MessageRow = styled.div`
+  position: relative;
+  padding: 12px 20px;
   width: 100%;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
   & + & {
-    margin-top: 8px;
+    /* padding: 12px 0; */
   }
+  background-color: ${props => props.isHovered ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
 `
 
 const MessageHeader = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: flex-end;
-  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
 `
 
 const MessageTitle = styled.p`
@@ -461,7 +699,6 @@ const MessageContentWrapper = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
 `
 
 const MessageContent = styled.p`
@@ -474,9 +711,72 @@ const MessageContent = styled.p`
   margin: 10px 0 0 0;
 `
 
-const MessageEmojiContainer = styled.div``
+const MessageUtilContainer = styled.div`
+  border: 1px solid lightgray;
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 12px;
+  right: 20px;
+  border-radius: 4px;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  background-color: white;
+  padding: 4px;
+`
+const MessageUtilIconWrapper = styled.div`
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  &:hover {
+    background-color: lightgray;
+  }
+  & + & {
+    margin-left: 6px;
+  }
+`
 
-const MessageEmojiWrapper = styled.div``
+const MessageEmojiContainer = styled.div`
+  padding-top: 10px;
+`
+
+const MessageEmojiWrapper = styled.div`
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 50px;
+  border-radius: 10px;
+  padding: 4px;
+  cursor: pointer;
+  border: ${props => props.hasClicked ? '1.5px solid #1D3458' : '1.5px solid lightgray'};
+  color: ${props => props.hasClicked ? 'white' : 'black'};
+  background-color: ${props => props.hasClicked ? '#1D3458' : 'transparent'};
+
+  & > img {
+    height: 19px;
+    width: 19px;
+  }
+  & > span {
+    font-weight: 600;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  &:hover {
+    color: white;
+    background-color: #1D3458;
+  }
+  & + & {
+    margin-left: 10px;
+  }
+`
 
 const MessageInputContainer = styled.div`
   height: 100%;
@@ -484,7 +784,7 @@ const MessageInputContainer = styled.div`
   display: flex;
   justify-content: center;
   box-sizing: border-box;
-  padding-top: 12px;
+  padding: 12px 20px 0 20px;
 `
 
 const MessageTextarea = styled.textarea`
@@ -502,7 +802,7 @@ const MessageButtonContainer = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 20px;
   box-sizing: border-box;
 `
 
