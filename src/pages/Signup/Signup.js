@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {db, firebaseApp, firebase } from '../../firebase'
 import { Link, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { setUserProfile } from '../../reducers/user';
 import { setLoading } from '../../reducers/loading';
 
 import {
@@ -56,6 +57,11 @@ const Signup = () => {
 			return false;
 		}
 
+		if (nickname.length > 16) {
+			alert('Your Nickname is too long. Please enter a nickname shorter than 15 characters.');
+			return false;
+		}
+
 		if (!isAgreeInfo) {
 			alert('You need to agree to the Privacy Policy and Cookie Policy to proceed.')
 			return false;
@@ -98,6 +104,12 @@ const Signup = () => {
 							.collection('users')
 							.doc(uid)
 							.set(payload);
+
+						// Temp store user-info at Redux
+						dispatch(setUserProfile({
+							uid: uid,
+							nickname: userObject.nickname
+						}));
 
 						history.push('/users/login');
 
