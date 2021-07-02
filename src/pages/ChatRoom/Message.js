@@ -269,6 +269,29 @@ const areEqual = (prevProps, nextProps) => {
   const hasEqualEmojis = (prevEmojis, nextEmojis) => {
     const prevEmojiUids = Object.keys(prevEmojis).sort();
     const nextEmojiUids = Object.keys(nextEmojis).sort();
+
+    /*
+      [Emojis Data Structure]
+      - Used a nested object with messageUid as key
+      - The value is an object of key:value(s) where key is the emojiUid
+      - Nested Objects are used in order to allow components to access the emoji data quickly using key-lookup
+
+      chatEmojis: {
+        [messageUid]: emojis,
+        ...
+      }
+
+      <IN MESSAGE COMPONENT>
+
+      emojis: {
+        [emojiUid]: {
+          messageUid: String -- messageUid,
+          uid: String -- emojiUid,
+          clickedUserUids: [userUid1, userUid2, ...] -- Array that stores who clicked this emoji
+        },
+        ...
+      }
+    */
     
     // Check if prev and next have same types of emojis
     if (prevEmojiUids.length !== nextEmojiUids.length) {

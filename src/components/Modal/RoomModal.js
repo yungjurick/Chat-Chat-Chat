@@ -71,10 +71,6 @@ const RoomModal = () => {
           content: 'Welcome to the Chat Room! Feel free to talk amongst yourself ;)',
           uid: uuid(),
           created: firebase.firestore.Timestamp.now().seconds,
-          likes: [],
-          checks: [],
-          parrots: [],
-          frogs: []
         })
 
       history.push(`/chat/room/${roomId}`)
