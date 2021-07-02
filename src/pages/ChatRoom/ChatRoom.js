@@ -154,6 +154,11 @@ const ChatRoom = () => {
         const roomDoc = await roomRef.get();
 
         console.log(roomDoc.data());
+
+        if (roomDoc.data() === undefined) {
+          alert('The room does not exist anymore. We will send you back to the room list.');
+          history.push('/chat/room');
+        }
         
         dispatch(setChatRoomTitle(roomDoc.data().title));
         dispatch(setChatRoomDesc(roomDoc.data().description));
@@ -425,6 +430,10 @@ const ChatRoom = () => {
   }
 
   const handleTabClosing = () => {
+    if (participants.length === 1) {
+      db.collection("chatrooms").doc("room_" + roomId).delete();
+      history.push('/chat/room');
+    }
     removeUserFromFirestore(roomId, userUid);
   }
 

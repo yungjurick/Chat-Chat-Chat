@@ -138,7 +138,7 @@ const ChatList = () => {
 					<NavButton secondary onClick={() => onLogout()}>Logout</NavButton>
 				</NavContainer>
 				<List>
-					{/* <TransitionGroup> */}
+					<TransitionGroup>
 					{
 						rooms.map(({ title, description, id, password }) => {
 							return (
@@ -152,7 +152,7 @@ const ChatList = () => {
 										<ListItemDescription>{description}</ListItemDescription>
 										<ListItemActionContainer>
 											{
-												password.length > 0 ? (<p>Private</p>) : (<p>Public</p>)
+												password.length > 0 ? (<p>🔒 Private</p>) : (<p>👐 Public</p>)
 											}
 										</ListItemActionContainer>
 									</ListItem>
@@ -160,7 +160,7 @@ const ChatList = () => {
 							)
 						})
 					}
-					{/* </TransitionGroup> */}
+					</TransitionGroup>
 				</List>
 			</ChatListContainer>
 			{
@@ -207,6 +207,7 @@ const NavButton = styled.button`
 `;
 
 const List = styled.div`
+ & > div {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	grid-auto-rows: 150px;
@@ -218,6 +219,7 @@ const List = styled.div`
 	&::-webkit-scrollbar {
     display: none;
   }
+ }
 `;
 
 const ListItem = styled.div`

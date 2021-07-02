@@ -37,7 +37,7 @@ const RoomPasswordModal = ({ roomId, roomPw }) => {
 	return (
     <RoomModalLayout>
       <RoomModalContainer>
-        <Header>This is a Private Room</Header>
+        <Header>This is a Private Room 🔒</Header>
 
         <FormLabel>Room Password</FormLabel>
         <FormTextInput type="password" value={enteredRoomPw} onChange={e => onChangePassword(e)}/>

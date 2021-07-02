@@ -23,6 +23,7 @@ const Container = styled.div`
 const Header = styled.h1`
   font-size: 24px;
   margin: 0 0 32px 0;
+  text-align: center;
 `
 
 const FormLabel = styled.p`

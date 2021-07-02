@@ -101,7 +101,7 @@ const RoomModal = () => {
 	return (
     <RoomModalLayout>
       <RoomModalContainer>
-        <Header>Create a New Room</Header>
+        <Header>Create a New Room ❣️</Header>
 
         <FormLabel>Room Title</FormLabel>
         <FormTextInput type="text" value={title} onChange={e => onChangeRoomObject(e, 'title')}/>
