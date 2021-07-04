@@ -61,6 +61,8 @@ const ChatRoom = () => {
 
   const { uid: userUid, nickname } = userProfile;
 
+  // Basis OnSelect Emoji Event Func
+  // - Used in: Message, MessageContent
   const onSelectEmoji = async (emojiUid, messageUid, isRemove = false) => {
     const emojiRef = db
       .collection('chatrooms')
@@ -146,8 +148,10 @@ const ChatRoom = () => {
   }
 
   // Initial Fetch For Room Data
-
   useEffect(() => {
+
+    // GET ROOM INFORMATION
+    // - title, description, password
     const getRoomInfo = async () => {
       try {
         const roomRef = db.collection("chatrooms").doc("room_" + roomId);
@@ -223,6 +227,13 @@ const ChatRoom = () => {
       .collection('messages')
       .orderBy("created")
 
+    const participantRef = db
+      .collection('chatrooms')
+      .doc('room_' + roomId)
+      .collection('participants')
+      .orderBy("entered");
+
+
     const unsubscribeChat = chatRef.onSnapshot((snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
@@ -241,12 +252,6 @@ const ChatRoom = () => {
         }
       });
     });
-
-    const participantRef = db
-      .collection('chatrooms')
-      .doc('room_' + roomId)
-      .collection('participants')
-      .orderBy("entered");
 
     const unsubscribeParticipant = participantRef.onSnapshot((snapshot) => {
       snapshot.docChanges().forEach((change) => {
@@ -276,7 +281,7 @@ const ChatRoom = () => {
       cp.push(newMessage)
       setChats(cp)
 
-      // Attach Emoji OnSnapshot Change
+      // Attach Emoji OnSnapshot Change as new message is added
       const emojiRef = db
         .collection('chatrooms')
         .doc('room_' + roomId)
@@ -340,9 +345,10 @@ const ChatRoom = () => {
       console.log("Modify Emoji", modifyEmoji)
       const ce = {...chatEmojis}
       const { messageUid, clickedUserUids, uid } = modifyEmoji;
-
+      
+      // If modified emoji has no more clicks,
+      // Fire event to firestore to delete emoji from message
       if (clickedUserUids.length === 0) {
-        // Fire event to firestore to delete emoji from message
         db.collection('chatrooms')
           .doc('room_' + roomId)
           .collection('messages')
@@ -351,9 +357,10 @@ const ChatRoom = () => {
           .doc(uid)
           .delete();
         
-        // Delete emoji from state
+        // Delete emoji from message-emojis object
         delete ce[messageUid][uid];
 
+        // If message does not have any emojis, delete messageUid key-val from ChatEmojis
         if (Object.keys(ce[messageUid]).length === 0) {
           delete ce[messageUid];
         }
@@ -430,6 +437,7 @@ const ChatRoom = () => {
   }
 
   const handleTabClosing = () => {
+    // If I am the last one in the rooom
     if (participants.length === 1) {
       db.collection("chatrooms").doc("room_" + roomId).delete();
       history.push('/chat/room');
