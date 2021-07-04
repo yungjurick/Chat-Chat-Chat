@@ -28,6 +28,7 @@ const Landing = () => {
 
 const LandingContainer = styled(Container)`
 	width: 35%;
+	min-width: 350px;
 `
 const Title = styled.h1`
 	margin: 0 0 20px 0;
