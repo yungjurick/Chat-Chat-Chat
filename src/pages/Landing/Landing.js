@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
 	Layout,
 	Container
 } from '../../styles/Form';
+import { firebaseApp } from '../../firebase';
 import { useHistory } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 import styled from 'styled-components';
 
 const Landing = () => {
 	const history = useHistory();
+	const userProfile = useSelector(state => state.user.userProfile);
+
+	// If already logged in -> redirect to room list
+	useEffect(() => {
+    firebaseApp.auth().onAuthStateChanged(user => {
+      const authUserUid = (firebaseApp.auth().currentUser || {}).uid;
+			const userUid = (userProfile?.uid || null);
+
+      if (authUserUid && userUid) {
+        history.push('/chat/room');
+      }
+    });
+  }, [userProfile.uid]);
+	
 	return (
 		<Layout>
 			<LandingContainer>
